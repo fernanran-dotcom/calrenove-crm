@@ -86,9 +86,13 @@ export default function NuevoPresupuestoPage() {
     setSaving(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+
       const { data: customer, error: custErr } = await supabase
         .from("customers")
         .insert({
+          user_id: user.id,
           name: clientName.trim(),
           phone: clientPhone.trim() || null,
           address: clientAddress.trim() || null,
