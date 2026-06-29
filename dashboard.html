@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Calrenove - Inicio</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="dashboard.html" class="navbar-brand">
+      <img src="img/logo-calrenove.png" alt="" onerror="this.style.display='none'"> Calrenove
+    </a>
+    <button class="navbar-toggle" aria-label="Menú">☰</button>
+    <div class="navbar-nav">
+      <a href="dashboard.html" class="active">Inicio</a>
+      <a href="nuevo.html">Nuevo Presupuesto</a>
+      <a href="historial.html">Historial</a>
+      <span class="user-info">andoni</span>
+      <span class="gs-status"></span>
+      <a href="#" onclick="App.logout()">Salir</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="action-bar no-print">
+      <a href="nuevo.html" class="btn btn-success">+ Nuevo</a>
+      <a href="historial.html" class="btn btn-secondary">Historial</a>
+    </div>
+
+    <div class="card">
+      <h2>Selecciona una marca</h2>
+      <div class="grid" id="marcasGrid"></div>
+    </div>
+  </div>
+
+  <script>var CONFIG = CONFIG || { googleSheetsWebAppUrl: null };</script>
+  <script src="config.js" onerror="console.warn('config.js no encontrado, modo local')"></script>
+  <script src="data/modelos.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    const grid = document.getElementById('marcasGrid');
+    MODELOS.marcas.forEach(m => {
+      const a = document.createElement('a');
+      a.href = 'nuevo.html?marca=' + m.id;
+      a.className = 'marca-card';
+      a.innerHTML = `<h3>${m.nombre}</h3><div class="count">${m.modelos.length} modelos</div>`;
+      grid.appendChild(a);
+    });
+  </script>
+</body>
+</html>

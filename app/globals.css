@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 210 58% 23%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 210 58% 23%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+.presupuesto-print {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #333;
+}
+
+.presupuesto-print .emp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.presupuesto-print .empresa-info img {
+  max-height: 55px;
+  margin-bottom: 4px;
+}
+
+.presupuesto-print .presupuesto-info {
+  text-align: right;
+  font-size: 12px;
+}
+
+.presupuesto-print .presupuesto-info .num {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.presupuesto-print .presupuesto-cliente {
+  margin-bottom: 14px;
+}
+
+.presupuesto-print .presupuesto-cliente h3 {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.presupuesto-print .descripcion-item {
+  margin-bottom: 12px;
+  font-size: 11px;
+}
+
+.presupuesto-print .tabla-precios {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.presupuesto-print .tabla-precios th {
+  color: #fff;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.presupuesto-print .tabla-precios td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #ddd;
+  font-size: 11px;
+}
+
+.presupuesto-print .tabla-precios .precio-derecha {
+  text-align: right;
+}
+
+.presupuesto-print .tabla-precios .total-row td {
+  font-weight: 700;
+  font-size: 13px;
+  border-top: 2px solid #333;
+}
+
+.presupuesto-print .incluye-no-incluye {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.presupuesto-print .incluye-no-incluye ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 10.5px;
+}
+
+.presupuesto-print .incluye-list li {
+  list-style-type: "✓ ";
+  color: #28a745;
+}
+
+.presupuesto-print .no-incluye-list li {
+  list-style-type: "✗ ";
+  color: #dc3545;
+}
+
+.presupuesto-print .notas-presupuesto {
+  background: #fffde7;
+  border-left: 3px solid #f9a825;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 10.5px;
+}
+
+.presupuesto-print .firma-section {
+  display: flex;
+  justify-content: space-between;
+  margin: 24px 0 16px;
+}
+
+.presupuesto-print .firma-section .linea {
+  width: 200px;
+  border-top: 1px solid #333;
+  padding-top: 6px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.presupuesto-print .presupuesto-footer {
+  text-align: center;
+  padding-top: 10px;
+  font-size: 10px;
+  color: #666;
+}
+
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+@media print {
+  .presupuesto-print {
+    font-size: 10px;
+  }
+  .presupuesto-print .presupuesto-info .num {
+    font-size: 13px;
+  }
+  .presupuesto-print .tabla-precios .total-row td {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .presupuesto-print .incluye-no-incluye {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

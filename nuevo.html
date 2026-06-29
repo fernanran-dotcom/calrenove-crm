@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Calrenove - Nuevo Presupuesto</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="dashboard.html" class="navbar-brand">
+      <img src="img/logo-calrenove.png" alt="" onerror="this.style.display='none'"> Presupuesto
+    </a>
+    <button class="navbar-toggle" aria-label="Menú">☰</button>
+    <div class="navbar-nav">
+      <a href="dashboard.html">Inicio</a>
+      <a href="nuevo.html" class="active">Nuevo Presupuesto</a>
+      <a href="historial.html">Historial</a>
+      <span class="user-info">andoni</span>
+      <span class="gs-status"></span>
+      <a href="#" onclick="App.logout()">Salir</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h2>Nuevo Presupuesto</h2>
+
+      <form id="presupuestoForm" onsubmit="return guardarPresupuesto(event)">
+
+        <h3 class="emp-titulo" style="margin: 0 0 12px;font-size:16px;">Empresa</h3>
+        <div class="empresa-selector" id="empresaSelector"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nº Presupuesto</label>
+            <input type="text" id="numPresupuesto" readonly>
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input type="text" id="fecha" readonly>
+          </div>
+        </div>
+
+        <h3 style="color:var(--primary);margin:20px 0 12px;font-size:16px;">Datos del Cliente</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del cliente</label>
+            <input type="text" id="clienteNombre" placeholder="Nombre y apellidos">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="tel" id="clienteTelefono" placeholder="Teléfono">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Dirección</label>
+            <input type="text" id="clienteDireccion" placeholder="Dirección, código postal, localidad">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="clienteEmail" placeholder="Email">
+          </div>
+        </div>
+
+        <h3 style="color:var(--primary);margin:20px 0 12px;font-size:16px;">Selección de Caldera</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Marca</label>
+            <select id="marcaSelect" onchange="cargarModelos()">
+              <option value="">Seleccionar marca...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Modelo</label>
+            <select id="modeloSelect" onchange="mostrarDetalles()">
+              <option value="">Seleccionar modelo...</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="detallesModelo" style="display:none;">
+          <div class="modelo-item" style="border-color:var(--primary-light);background:#f0f7ff;">
+            <h4 id="detalleNombre"></h4>
+            <p class="descripcion" id="detalleDescripcion"></p>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px;">
+              <div><span style="font-size:13px;color:#888;">Precio instalación:</span> <span class="precio" id="detallePrecio"></span></div>
+              <div><span style="font-size:13px;color:#888;">Precio + IVA (21%):</span> <span class="precio" id="detallePrecioIVA" style="color:var(--primary);"></span></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Precio personalizado (opcional)</label>
+            <input type="number" id="precioPersonalizado" step="0.01" placeholder="Dejar vacío para usar el precio por defecto">
+          </div>
+
+          <h3 style="color:var(--primary);margin:20px 0 12px;font-size:16px;">Incluye</h3>
+          <ul class="incluye-list" id="detalleIncluye"></ul>
+
+          <h3 style="color:var(--primary);margin:20px 0 12px;font-size:16px;">No incluye</h3>
+          <ul class="no-incluye-list" id="detalleNoIncluye"></ul>
+
+          <div id="detalleOpcionales" style="display:none;margin:16px 0;">
+            <h3 style="color:var(--primary);margin:0 0 12px;font-size:16px;">Opcionales</h3>
+            <div id="opcionalesContainer"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Notas adicionales</label>
+            <textarea id="notas" placeholder="Condiciones particulares, observaciones..."></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-success btn-block" style="margin-top:20px;">Generar Presupuesto</button>
+      </form>
+    </div>
+  </div>
+
+  <script>var CONFIG = CONFIG || { googleSheetsWebAppUrl: null };</script>
+  <script src="config.js" onerror="console.warn('config.js no encontrado, modo local')"></script>
+  <script src="data/modelos.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let modeloSeleccionado = null;
+    let empresaSeleccionada = 'calrenove';
+
+    document.getElementById('numPresupuesto').value = App.generarNumPresupuesto();
+    document.getElementById('fecha').value = App.formatearFecha();
+
+    // Empresa selector
+    const empSel = document.getElementById('empresaSelector');
+    EMPRESAS.forEach(e => {
+      const label = document.createElement('label');
+      label.className = 'empresa-option';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'empresa';
+      input.value = e.id;
+      if (e.id === 'calrenove') input.checked = true;
+      input.onchange = function() { empresaSeleccionada = e.id; };
+      const div = document.createElement('div');
+      div.className = 'card-select';
+      div.innerHTML = `<img src="${e.logo}" alt="${e.nombre}" onerror="this.style.display='none'"><span>${e.nombre}</span>`;
+      label.appendChild(input);
+      label.appendChild(div);
+      empSel.appendChild(label);
+    });
+
+    // Marca selector
+    const marcaSelect = document.getElementById('marcaSelect');
+    MODELOS.marcas.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.nombre;
+      marcaSelect.appendChild(opt);
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const marcaParam = urlParams.get('marca');
+    if (marcaParam) { marcaSelect.value = marcaParam; cargarModelos(); }
+
+    function cargarModelos() {
+      const marcaId = marcaSelect.value;
+      const select = document.getElementById('modeloSelect');
+      const detalles = document.getElementById('detallesModelo');
+      select.innerHTML = '<option value="">Seleccionar modelo...</option>';
+      detalles.style.display = 'none';
+      if (!marcaId) return;
+      const marca = MODELOS.marcas.find(m => m.id === marcaId);
+      if (!marca) return;
+      marca.modelos.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.nombre} - ${m.precioFinal.toFixed(2).replace('.',',')} EUR`;
+        select.appendChild(opt);
+      });
+    }
+
+    function mostrarDetalles() {
+      const marcaId = marcaSelect.value;
+      const modeloId = document.getElementById('modeloSelect').value;
+      const detalles = document.getElementById('detallesModelo');
+      if (!marcaId || !modeloId) { detalles.style.display = 'none'; return; }
+      const marca = MODELOS.marcas.find(m => m.id === marcaId);
+      if (!marca) { detalles.style.display = 'none'; return; }
+      modeloSeleccionado = marca.modelos.find(m => m.id === modeloId);
+      if (!modeloSeleccionado) { detalles.style.display = 'none'; return; }
+
+      const m = modeloSeleccionado;
+      document.getElementById('detalleNombre').textContent = m.nombre;
+      document.getElementById('detalleDescripcion').textContent = m.descripcion;
+      document.getElementById('detallePrecio').textContent = m.precioFinal.toFixed(2).replace('.',',') + ' EUR';
+      document.getElementById('detallePrecioIVA').textContent = (m.precioFinal * 1.21).toFixed(2).replace('.',',') + ' EUR';
+
+      const inc = document.getElementById('detalleIncluye');
+      inc.innerHTML = '';
+      (m.incluye||[]).forEach(i => { const li = document.createElement('li'); li.textContent = i; inc.appendChild(li); });
+
+      const noinc = document.getElementById('detalleNoIncluye');
+      noinc.innerHTML = '';
+      (m.noIncluye||[]).forEach(i => { const li = document.createElement('li'); li.textContent = i; noinc.appendChild(li); });
+
+      const opcDiv = document.getElementById('detalleOpcionales');
+      const opcContainer = document.getElementById('opcionalesContainer');
+      opcContainer.innerHTML = '';
+
+      if (m.opcionales && m.opcionales.length > 0) {
+        opcDiv.style.display = 'block';
+        m.opcionales.forEach(o => {
+          const label = document.createElement('label');
+          label.style.cssText = 'display:flex;align-items:center;gap:8px;margin:8px 0;font-size:14px;';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 'opcional-cb';
+          cb.value = o.nombre;
+          cb.style.width = '20px';
+          cb.style.height = '20px';
+          label.appendChild(cb);
+          label.append(`${o.nombre} - ${o.precio.toFixed(2).replace('.',',')} EUR`);
+          opcContainer.appendChild(label);
+        });
+      } else {
+        opcDiv.style.display = 'none';
+      }
+      detalles.style.display = 'block';
+    }
+
+    async function guardarPresupuesto(e) {
+      e.preventDefault();
+      if (!modeloSeleccionado) { alert('Selecciona un modelo de caldera'); return false; }
+
+      const opcionales = [];
+      document.querySelectorAll('.opcional-cb:checked').forEach(cb => { opcionales.push(cb.value); });
+
+      const data = {
+        empresa: empresaSeleccionada,
+        numPresupuesto: document.getElementById('numPresupuesto').value,
+        fecha: document.getElementById('fecha').value,
+        cliente: {
+          nombre: document.getElementById('clienteNombre').value,
+          direccion: document.getElementById('clienteDireccion').value,
+          telefono: document.getElementById('clienteTelefono').value,
+          email: document.getElementById('clienteEmail').value
+        },
+        marca: { id: marcaSelect.value, nombre: marcaSelect.options[marcaSelect.selectedIndex].text },
+        modelo: modeloSeleccionado,
+        precioPersonalizado: document.getElementById('precioPersonalizado').value ? parseFloat(document.getElementById('precioPersonalizado').value) : null,
+        opcionales: opcionales,
+        notas: document.getElementById('notas').value
+      };
+
+      const id = await App.guardarPresupuesto(data);
+      window.location.href = 'presupuesto.html?id=' + id;
+      return false;
+    }
+  </script>
+</body>
+</html>

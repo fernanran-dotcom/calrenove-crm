@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Calrenove - Ver Presupuesto</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar no-print">
+    <a href="dashboard.html" class="navbar-brand">
+      <img src="img/logo-calrenove.png" alt="" onerror="this.style.display='none'"> Presupuesto
+    </a>
+    <button class="navbar-toggle" aria-label="Menú">☰</button>
+    <div class="navbar-nav">
+      <a href="dashboard.html">Inicio</a>
+      <a href="nuevo.html">Nuevo Presupuesto</a>
+      <a href="historial.html">Historial</a>
+      <span class="user-info">andoni</span>
+      <span class="gs-status"></span>
+      <a href="#" onclick="App.logout()">Salir</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="action-bar no-print" id="actionBar"></div>
+    <div id="presupuestoContainer"></div>
+  </div>
+
+  <script>var CONFIG = CONFIG || { googleSheetsWebAppUrl: null };</script>
+  <script src="config.js" onerror="console.warn('config.js no encontrado, modo local')"></script>
+  <script src="data/modelos.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (async function() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) { window.location.href = 'historial.html'; return; }
+
+      const presupuesto = await App.getPresupuesto(id);
+      if (!presupuesto) { window.location.href = 'historial.html'; return; }
+
+      const p = presupuesto;
+      const shareText = `Presupuesto N\u00ba ${p.numPresupuesto} - ${p.cliente.nombre} - ${p.modelo.nombre} - ${((p.precioPersonalizado||p.modelo.precioFinal) * 1.21).toFixed(2).replace('.',',')} EUR`;
+      const fileName = `Presupuesto_${p.numPresupuesto}_${p.cliente.nombre.replace(/[^a-z0-9]/gi,'_')}.pdf`;
+
+      document.getElementById('actionBar').innerHTML =
+        `<button class="btn" onclick="window.print()">Imprimir / PDF</button>
+         <button class="btn btn-success" onclick="compartirPDF(this)">Compartir</button>
+         <a href="nuevo.html" class="btn">Nuevo</a>
+         <a href="historial.html" class="btn btn-secondary">Historial</a>`;
+
+      window.compartirPDF = async function(btn) {
+        btn.textContent = 'Generando PDF...';
+        btn.disabled = true;
+
+        if (typeof html2pdf === 'undefined') {
+          try {
+            await new Promise((resolve, reject) => {
+              const s = document.createElement('script');
+              s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+              s.onload = resolve;
+              s.onerror = reject;
+              document.head.appendChild(s);
+            });
+          } catch {
+            alert('Error al cargar la librer\u00eda PDF. Intenta usar "Imprimir / PDF"');
+            btn.textContent = 'Compartir';
+            btn.disabled = false;
+            return;
+          }
+        }
+
+        const el = document.getElementById('presupuestoContainer').querySelector('.presupuesto-print');
+        if (!el) { btn.textContent = 'Compartir'; btn.disabled = false; return; }
+
+        const opt = {
+          margin: [5, 5, 5, 5],
+          filename: fileName,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        try {
+          const pdfBlob = await html2pdf().set(opt).from(el).outputPdf('blob');
+          const url = URL.createObjectURL(pdfBlob);
+          const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({ title: 'Presupuesto ' + p.numPresupuesto, files: [pdfFile] });
+          } else {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+
+            const emailLink = `mailto:?subject=Presupuesto N\u00ba ${p.numPresupuesto}&body=${encodeURIComponent(shareText + '\n\n(PDF adjunto - ' + fileName + ')')}`;
+            const waLink = `https://wa.me/?text=${encodeURIComponent(shareText + '\n\n' + window.location.href)}`;
+            const el2 = document.getElementById('actionBar');
+            el2.innerHTML +=
+              `<div style="width:100%;display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+                <a href="${emailLink}" class="btn" style="flex:1;background:#ea4335;" target="_blank">✉ Email</a>
+                <a href="${waLink}" class="btn" style="flex:1;background:#25D366;color:#000;" target="_blank">📱 WhatsApp</a>
+                <button class="btn btn-secondary" style="flex:1;" onclick="this.parentElement.remove()">Cerrar</button>
+              </div>`;
+          }
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } catch(e) {
+          alert('Error al generar PDF: ' + e.message);
+        }
+
+        btn.textContent = 'Compartir';
+        btn.disabled = false;
+      };
+
+      App.renderPresupuesto(p, 'presupuestoContainer');
+    })();
+  </script>
+</body>
+</html>
