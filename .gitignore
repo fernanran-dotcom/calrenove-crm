@@ -5,6 +5,8 @@ node_modules/
 .env.local
 .env.production
 out/
+supabase/.temp/
+supabase/seeds/*_fixed.sql
 
 .vercel
 .env*
