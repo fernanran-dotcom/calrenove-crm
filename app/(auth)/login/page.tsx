@@ -2,28 +2,49 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login } from "@/lib/actions";
+import { login, register } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+type Mode = "login" | "register";
+
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     const formData = new FormData(e.currentTarget);
-    const result = await login(formData);
 
-    if (result.error) {
-      setError(result.error);
+    if (mode === "login") {
+      const result = await login(formData);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        router.push("/");
+        router.refresh();
+      }
     } else {
-      router.push("/");
-      router.refresh();
+      const password = formData.get("password") as string;
+      const confirm = formData.get("confirm") as string;
+      if (password !== confirm) {
+        setError("Las contraseñas no coinciden");
+        return;
+      }
+      const result = await register(formData);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSuccess("Cuenta creada. Ya puedes iniciar sesión.");
+        setMode("login");
+      }
     }
   }
 
@@ -31,9 +52,28 @@ export default function LoginPage() {
     <Card className="shadow-2xl">
       <CardHeader className="space-y-1 text-center">
         <CardTitle className="text-2xl font-bold">Calrenove CRM</CardTitle>
-        <CardDescription>Inicia sesión para continuar</CardDescription>
+        <CardDescription>
+          {mode === "login" ? "Inicia sesión para continuar" : "Crea una cuenta nueva"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="flex mb-4 rounded-lg border p-1 bg-muted">
+          <button
+            type="button"
+            onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${mode === "login" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            Iniciar sesión
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("register"); setError(""); setSuccess(""); }}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${mode === "register" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            Registrarse
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -43,11 +83,16 @@ export default function LoginPage() {
             <Label htmlFor="password">Contraseña</Label>
             <Input id="password" name="password" type="password" placeholder="••••••••" required />
           </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+          {mode === "register" && (
+            <div className="space-y-2">
+              <Label htmlFor="confirm">Confirmar contraseña</Label>
+              <Input id="confirm" name="confirm" type="password" placeholder="••••••••" required />
+            </div>
           )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {success && <p className="text-sm text-emerald-600">{success}</p>}
           <Button type="submit" className="w-full">
-            Iniciar sesión
+            {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
           </Button>
         </form>
       </CardContent>

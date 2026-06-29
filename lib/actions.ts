@@ -26,6 +26,23 @@ export async function register(formData: FormData) {
 
   const { error, data } = await supabase.auth.signUp({ email, password });
   if (error) return { error: error.message };
+
+  if (data.user) {
+    try {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      await fetch(`${url}/auth/v1/admin/users/${data.user.id}`, {
+        method: "PUT",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email_confirm: true }),
+      });
+    } catch {}
+  }
+
   return { success: true, user: data.user };
 }
 
