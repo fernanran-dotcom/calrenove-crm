@@ -177,7 +177,7 @@ export default function NuevoPresupuestoPage() {
               brand_id: resolvedBrandId,
               name: customModelName.trim() || "Personalizado",
               slug: modelSlug,
-              description: customDescription || "Presupuesto personalizado",
+              description: customDescription || null,
               price_base: 0,
               price_final: templateSubtotal,
               price_rounded: templateSubtotal,

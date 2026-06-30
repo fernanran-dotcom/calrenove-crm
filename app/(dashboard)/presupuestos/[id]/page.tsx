@@ -268,7 +268,7 @@ export default function BudgetViewPage() {
                   <div style={{ marginBottom: 12, fontSize: 11 }}>
                     <strong>DESCRIPCIÓN:</strong><br />
                     {isTemplate ? (
-                      <>Suministro e instalación de {brandName}{brandName && modelName ? " " : ""}{modelName}{descText && (brandName || modelName) ? " — " : ""}{descText || (brandName || modelName ? "" : "Presupuesto personalizado")}</>
+                      <>Suministro e instalación de {brandName}{brandName && modelName ? " " : ""}{modelName}{descText && (brandName || modelName) ? " — " : ""}{descText}</>
                     ) : (
                       <>Suministro e instalación de {budget.model?.description || budget.model?.name}
                       {" "}Se incluyen los tramos de chimenea y materiales para su instalación, así como el transporte a vertedero autorizado de la caldera retirada.</>
