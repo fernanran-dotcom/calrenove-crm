@@ -263,7 +263,7 @@ export default function BudgetViewPage() {
               const brandName = budget.brand_name || budget.brand?.name || "";
               const descText = budget.description || budget.model?.description || budget.model?.name || "";
               const fullName = (budget.brand?.name || brandName) + " " + (budget.model?.name || modelName);
-              const isAC = /vivair|aire acondicionado/i.test(fullName);
+              const isAC = /aire acondicionado/i.test(fullName) || (budget.model?.description || "").toLowerCase().includes("aire acondicionado");
 
               return (
                 <>
