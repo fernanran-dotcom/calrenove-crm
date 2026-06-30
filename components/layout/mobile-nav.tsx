@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, FilePlus, History, Handshake, DollarSign } from "lucide-react";
+import { logout } from "@/lib/actions";
+import { LayoutDashboard, FilePlus, History, Handshake, DollarSign, LogOut } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -15,6 +16,13 @@ const items = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await logout();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background lg:hidden no-print safe-area-bottom">
@@ -27,7 +35,7 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 px-2 py-1 min-w-0 flex-1",
+                "flex flex-col items-center justify-center gap-0.5 px-1 py-1 min-w-0 flex-1",
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >
@@ -38,6 +46,13 @@ export function MobileNav() {
             </Link>
           );
         })}
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center justify-center gap-0.5 px-1 py-1 min-w-0 flex-1 text-muted-foreground"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="text-[10px] font-medium leading-tight truncate max-w-full">Salir</span>
+        </button>
       </div>
     </nav>
   );
