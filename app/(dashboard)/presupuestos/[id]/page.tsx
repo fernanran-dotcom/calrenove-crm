@@ -262,16 +262,20 @@ export default function BudgetViewPage() {
               const modelName = budget.model_name || budget.model?.name || "";
               const brandName = budget.brand_name || budget.brand?.name || "";
               const descText = budget.description || budget.model?.description || budget.model?.name || "";
+              const fullName = (budget.brand?.name || brandName) + " " + (budget.model?.name || modelName);
+              const isAC = /vivair|aire acondicionado/i.test(fullName);
 
               return (
                 <>
                   <div style={{ marginBottom: 12, fontSize: 11 }}>
                     <strong>DESCRIPCIÓN:</strong><br />
                     {isTemplate ? (
-                      <>Suministro e instalación de {brandName}{brandName && modelName ? " " : ""}{modelName}{descText && (brandName || modelName) ? " — " : ""}{descText}</>
+                      <>{descText || (brandName ? `Suministro e instalación de ${brandName}${modelName ? " " + modelName : ""}` : "")}</>
                     ) : (
-                      <>Suministro e instalación de {budget.model?.description || budget.model?.name}
-                      {" "}Se incluyen los tramos de chimenea y materiales para su instalación, así como el transporte a vertedero autorizado de la caldera retirada.</>
+                      <>{isAC
+                        ? `Suministro e instalación de aire acondicionado ${budget.brand?.name || ""} ${budget.model?.name || ""}. Se incluye instalación completa, soporte, mando y 3 metros de tubería.`
+                        : `Suministro e instalación de ${budget.model?.description || budget.model?.name} Se incluyen los tramos de chimenea y materiales para su instalación, así como el transporte a vertedero autorizado de la caldera retirada.`
+                      }</>
                     )}
                   </div>
 
