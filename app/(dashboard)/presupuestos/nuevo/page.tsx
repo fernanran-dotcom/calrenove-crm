@@ -157,20 +157,20 @@ export default function NuevoPresupuestoPage() {
       if (custErr) throw custErr;
 
       if (isCustom) {
-        // Create or reuse brand slug
         const brandSlug = customBrandName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
         const modelSlug = (customModelName || "personalizado").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
         let resolvedBrandId: string | undefined = brands.find((b) => b.slug === brandSlug)?.id;
         if (!resolvedBrandId) {
-          const { data: nb } = await supabase.from("boiler_brands").insert({ name: customBrandName.trim(), slug: brandSlug }).select().single();
-          resolvedBrandId = nb!.id;
-          setBrands((prev) => [...prev, nb!]);
+          const { data: nb, error: nbErr } = await supabase.from("boiler_brands").insert({ name: customBrandName.trim(), slug: brandSlug }).select().single();
+          if (nbErr || !nb) throw new Error("Error al crear la marca: " + (nbErr?.message || "sin respuesta"));
+          resolvedBrandId = nb.id;
+          setBrands((prev) => [...prev, nb]);
         }
 
         let resolvedModelId: string | undefined = models.find((m) => m.slug === modelSlug)?.id;
         if (!resolvedModelId) {
-          const { data: nm } = await supabase
+          const { data: nm, error: nmErr } = await supabase
             .from("boiler_models")
             .insert({
               brand_id: resolvedBrandId,
@@ -183,24 +183,24 @@ export default function NuevoPresupuestoPage() {
             })
             .select()
             .single();
-          resolvedModelId = nm!.id;
-          setModels((prev) => [...prev, nm!]);
+          if (nmErr || !nm) throw new Error("Error al crear el modelo: " + (nmErr?.message || "sin respuesta"));
+          resolvedModelId = nm.id;
+          setModels((prev) => [...prev, nm]);
         }
 
-        if (!resolvedBrandId || !resolvedModelId) { alert("Error al crear la marca o modelo"); setSaving(false); return; }
-
-        // Persist includes/excludes
         const inclLines = customIncludes.map((s) => s.trim()).filter(Boolean);
         const exclLines = customExcludes.map((s) => s.trim()).filter(Boolean);
         if (inclLines.length) {
-          await supabase.from("model_includes").insert(
+          const { error: ie } = await supabase.from("model_includes").insert(
             inclLines.map((desc, i) => ({ model_id: resolvedModelId, description: desc, sort_order: i + 1 }))
           );
+          if (ie) throw new Error("Error al guardar Incluye: " + ie.message);
         }
         if (exclLines.length) {
-          await supabase.from("model_excludes").insert(
+          const { error: ee } = await supabase.from("model_excludes").insert(
             exclLines.map((desc, i) => ({ model_id: resolvedModelId, description: desc, sort_order: i + 1 }))
           );
+          if (ee) throw new Error("Error al guardar No incluye: " + ee.message);
         }
 
         const budget = await createBudget({
