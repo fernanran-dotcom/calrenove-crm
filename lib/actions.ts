@@ -105,7 +105,8 @@ export async function createBudget(data: {
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Error al insertar presupuesto: " + error.message);
+  if (!budget) throw new Error("No se pudo crear el presupuesto (sin respuesta)");
 
   if (data.selected_optionals?.length) {
     const { error: optError } = await supabase.from("budget_selected_optionals").insert(
@@ -114,7 +115,7 @@ export async function createBudget(data: {
         ...opt,
       }))
     );
-    if (optError) throw new Error(optError.message);
+    if (optError) throw new Error("Error al guardar opcionales: " + optError.message);
   }
 
   revalidatePath("/");

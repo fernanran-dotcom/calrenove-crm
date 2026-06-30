@@ -154,7 +154,8 @@ export default function NuevoPresupuestoPage() {
         .select()
         .single();
 
-      if (custErr) throw custErr;
+      if (custErr) throw new Error("Error al crear cliente: " + custErr.message);
+      if (!customer) throw new Error("No se pudo crear el cliente (sin respuesta)");
 
       if (isCustom) {
         const brandSlug = customBrandName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -203,6 +204,7 @@ export default function NuevoPresupuestoPage() {
           if (ee) throw new Error("Error al guardar No incluye: " + ee.message);
         }
 
+        if (!resolvedBrandId || !resolvedModelId) throw new Error("Error: marca o modelo no resuelto");
         const budget = await createBudget({
           company_id: companyId,
           customer_id: customer.id,
