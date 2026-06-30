@@ -64,7 +64,7 @@ export default function NuevoPresupuestoPage() {
       if (co) setCompanies(co);
       if (co?.length) setCompanyId(co[0].id);
 
-      const { data: br } = await supabase.from("boiler_brands").select("*").order("name");
+      const { data: br } = await supabase.from("boiler_brands").select("*").eq("is_custom", false).order("name");
       if (br) setBrands(br);
     }
     load();
@@ -158,44 +158,28 @@ export default function NuevoPresupuestoPage() {
       if (!customer) throw new Error("No se pudo crear el cliente (sin respuesta)");
 
       if (isCustom) {
-        const brandSlug = customBrandName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-        const modelSlug = (customModelName || "personalizado").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+        const brandSlug = customBrandName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now().toString(36).slice(-4);
+        const modelSlug = (customModelName || "personalizado").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now().toString(36).slice(-4);
 
-        let resolvedBrandId: string | undefined = brands.find((b) => b.slug === brandSlug)?.id;
-        if (!resolvedBrandId) {
-          const { data: nb, error: nbErr } = await supabase.from("boiler_brands").insert({ name: customBrandName.trim(), slug: brandSlug }).select().single();
-          if (nbErr || !nb) throw new Error("Error al crear la marca: " + (nbErr?.message || "sin respuesta"));
-          resolvedBrandId = nb.id;
-          setBrands((prev) => [...prev, nb]);
-        }
+        const { data: nb, error: nbErr } = await supabase.from("boiler_brands").insert({ name: customBrandName.trim(), slug: brandSlug, is_custom: true }).select().single();
+        if (nbErr || !nb) throw new Error("Error al crear la marca: " + (nbErr?.message || "sin respuesta"));
 
-        // Check DB directly for existing model slug (not just local state)
-        const { data: existingModel } = await supabase
+        const { data: nm, error: nmErr } = await supabase
           .from("boiler_models")
-          .select("id")
-          .eq("slug", modelSlug)
-          .maybeSingle();
-        let resolvedModelId: string | undefined = existingModel?.id;
-        if (!resolvedModelId) {
-          const uniqueSuffix = Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 4);
-          const uniqueSlug = `${modelSlug}-${uniqueSuffix}`;
-          const { data: nm, error: nmErr } = await supabase
-            .from("boiler_models")
-            .insert({
-              brand_id: resolvedBrandId,
-              name: customModelName.trim() || "Personalizado",
-              slug: uniqueSlug,
-              description: customDescription || (customModelName.trim() || "Presupuesto personalizado"),
-              price_base: 0,
-              price_final: templateSubtotal,
-              price_rounded: templateSubtotal,
-            })
-            .select()
-            .single();
-          if (nmErr || !nm) throw new Error("Error al crear el modelo: " + (nmErr?.message || "sin respuesta"));
-          resolvedModelId = nm.id;
-          setModels((prev) => [...prev, nm]);
-        }
+          .insert({
+            brand_id: nb.id,
+            name: customModelName.trim() || "Personalizado",
+            slug: modelSlug,
+            description: customDescription || (customModelName.trim() || "Presupuesto personalizado"),
+            price_base: 0,
+            price_final: templateSubtotal,
+            price_rounded: templateSubtotal,
+          })
+          .select()
+          .single();
+        if (nmErr || !nm) throw new Error("Error al crear el modelo: " + (nmErr?.message || "sin respuesta"));
+        const resolvedBrandId = nb.id;
+        const resolvedModelId = nm.id;
 
         const inclLines = customIncludes.map((s) => s.trim()).filter(Boolean);
         const exclLines = customExcludes.map((s) => s.trim()).filter(Boolean);
