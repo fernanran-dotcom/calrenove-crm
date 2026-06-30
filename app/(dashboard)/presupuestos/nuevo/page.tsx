@@ -355,6 +355,16 @@ export default function NuevoPresupuestoPage() {
                   </div>
                 </div>
                 <div>
+                  <Label>Descripción</Label>
+                  <textarea
+                    value={customDescription}
+                    onChange={(e) => setCustomDescription(e.target.value)}
+                    rows={2}
+                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+                    placeholder=""
+                  />
+                </div>
+                <div>
                   <Label className="flex items-center gap-2">
                     <span>Precio total (opcional)</span>
                     <Input
