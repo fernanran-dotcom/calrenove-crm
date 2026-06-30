@@ -256,7 +256,7 @@ export default function BudgetViewPage() {
                   <div style={{ marginBottom: 12, fontSize: 11 }}>
                     <strong>DESCRIPCIÓN:</strong><br />
                     {isTemplate ? (
-                      <>Suministro e instalación de {descText}</>
+                      <>Suministro e instalación de {brandName}{brandName && modelName ? " " : ""}{modelName}{descText && (brandName || modelName) ? " — " : ""}{descText || (brandName || modelName ? "" : "Presupuesto personalizado")}</>
                     ) : (
                       <>Suministro e instalación de {budget.model?.description || budget.model?.name}
                       {" "}Se incluyen los tramos de chimenea y materiales para su instalación, así como el transporte a vertedero autorizado de la caldera retirada.</>
@@ -274,14 +274,24 @@ export default function BudgetViewPage() {
                     </thead>
                     <tbody>
                       {isTemplate && budget.items?.length > 0 ? (
-                        budget.items.filter((i: any) => i.concepto?.trim()).map((item: any, idx: number) => (
-                          <tr key={idx}>
-                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{item.concepto}</td>
-                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>{item.cantidad}</td>
-                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(item.precio)}</td>
-                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(item.cantidad * item.precio)}</td>
-                          </tr>
-                        ))
+                        <>
+                          {modelName && (
+                            <tr>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{modelName}</td>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>1</td>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(0)}</td>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(0)}</td>
+                            </tr>
+                          )}
+                          {budget.items.filter((i: any) => i.concepto?.trim()).map((item: any, idx: number) => (
+                            <tr key={idx}>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{item.concepto}</td>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>{item.cantidad}</td>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(item.precio)}</td>
+                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(item.cantidad * item.precio)}</td>
+                            </tr>
+                          ))}
+                        </>
                       ) : (
                         <tr>
                           <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{modelName}</td>
