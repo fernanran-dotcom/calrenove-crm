@@ -69,7 +69,7 @@ export default async function HistorialPage() {
                       <td className="p-3 hidden lg:table-cell text-xs text-muted-foreground" data-label="Modelo">{b.model?.name}</td>
                       <td className="p-3 text-right font-medium" data-label="Total">{formatCurrency(b.total)}</td>
                       <td className="p-3 text-center" data-label="Estado"><CommercialStatusBadge status={b.commercial_status} /></td>
-                      <td className="p-3 text-center" data-label="Cobro"><PaymentStatusBadge status={b.payment_status} /></td>
+                      <td className="p-3 text-center" data-label="Cobro">{b.commercial_status !== "rejected" ? <PaymentStatusBadge status={b.payment_status} /> : <span className="text-xs text-muted-foreground">—</span>}</td>
                       <td className="p-3 text-center" data-label="">
                         <Link href={`/presupuestos/${b.id}`} className="text-primary underline text-xs">Ver</Link>
                       </td>

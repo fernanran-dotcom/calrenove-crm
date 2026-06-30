@@ -184,7 +184,7 @@ export default function BudgetViewPage() {
 
       <div className="flex flex-wrap gap-2 no-print items-center">
         <CommercialStatusBadge status={budget.commercial_status} />
-        <PaymentStatusBadge status={budget.payment_status} />
+        {budget.commercial_status !== "rejected" && <PaymentStatusBadge status={budget.payment_status} />}
         {budget.commercial_status === "pending" && (
           <>
             <Button size="sm" variant="success" onClick={() => handleStatusChange("accepted")}>Aceptar</Button>

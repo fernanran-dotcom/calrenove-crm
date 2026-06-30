@@ -141,6 +141,7 @@ export async function updateCommercialStatus(
     commercial_status: newStatus,
     accepted_at: newStatus === "accepted" ? now : null,
     rejected_at: newStatus === "rejected" ? now : null,
+    payment_status: newStatus === "rejected" ? "paid" : undefined,
   };
 
   const { error } = await supabase
