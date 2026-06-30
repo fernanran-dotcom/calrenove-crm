@@ -169,14 +169,22 @@ export default function NuevoPresupuestoPage() {
           setBrands((prev) => [...prev, nb]);
         }
 
-        let resolvedModelId: string | undefined = models.find((m) => m.slug === modelSlug)?.id;
+        // Check DB directly for existing model slug (not just local state)
+        const { data: existingModel } = await supabase
+          .from("boiler_models")
+          .select("id")
+          .eq("slug", modelSlug)
+          .maybeSingle();
+        let resolvedModelId: string | undefined = existingModel?.id;
         if (!resolvedModelId) {
+          const uniqueSuffix = Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 4);
+          const uniqueSlug = `${modelSlug}-${uniqueSuffix}`;
           const { data: nm, error: nmErr } = await supabase
             .from("boiler_models")
             .insert({
               brand_id: resolvedBrandId,
               name: customModelName.trim() || "Personalizado",
-              slug: modelSlug,
+              slug: uniqueSlug,
               description: customDescription || (customModelName.trim() || "Presupuesto personalizado"),
               price_base: 0,
               price_final: templateSubtotal,
