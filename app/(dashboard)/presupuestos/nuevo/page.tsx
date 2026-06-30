@@ -98,7 +98,8 @@ export default function NuevoPresupuestoPage() {
   const catalogoIva = catalogoSubtotal * 0.21;
   const catalogoTotal = catalogoSubtotal + catalogoIva;
 
-  const templateSubtotal = items.reduce((s, item) => s + item.cantidad * item.precio, 0);
+  const itemsSubtotal = items.reduce((s, item) => s + item.cantidad * item.precio, 0);
+  const templateSubtotal = customPrice ? parseFloat(customPrice) : itemsSubtotal;
   const templateIva = templateSubtotal * 0.21;
   const templateTotal = templateSubtotal + templateIva;
 
@@ -360,6 +361,23 @@ export default function NuevoPresupuestoPage() {
                     className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
                     placeholder="Descripción del suministro e instalación..."
                   />
+                </div>
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <span>Precio total (opcional)</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder={itemsSubtotal > 0 ? itemsSubtotal.toFixed(2) : "0.00"}
+                      value={customPrice}
+                      onChange={(e) => setCustomPrice(e.target.value)}
+                      className="w-36 h-8 text-sm"
+                    />
+                  </Label>
+                  {customPrice && itemsSubtotal > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">Los conceptos suman {itemsSubtotal.toFixed(2)} € — el precio personalizado sustituye este total</p>
+                  )}
                 </div>
               </div>
             )}
