@@ -287,14 +287,6 @@ export default function BudgetViewPage() {
                     <tbody>
                       {isTemplate && budget.items?.length > 0 ? (
                         <>
-                          {modelName && (
-                            <tr>
-                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{modelName}</td>
-                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>1</td>
-                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(0)}</td>
-                              <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(0)}</td>
-                            </tr>
-                          )}
                           {budget.items.filter((i: any) => i.concepto?.trim()).map((item: any, idx: number) => (
                             <tr key={idx}>
                               <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{item.concepto}</td>
