@@ -64,6 +64,10 @@ export async function createBudget(data: {
   total: number;
   custom_price?: number | null;
   notes?: string | null;
+  brand_name?: string | null;
+  model_name?: string | null;
+  description?: string | null;
+  items?: any[];
   issue_date: string;
   valid_until: string;
   selected_optionals?: Array<{ optional_id: string; name: string; price: number }>;
@@ -74,24 +78,30 @@ export async function createBudget(data: {
 
   const budgetNumber = await getNextBudgetNumber();
 
+  const insertData: Record<string, any> = {
+    budget_number: budgetNumber,
+    company_id: data.company_id,
+    customer_id: data.customer_id,
+    brand_id: data.brand_id,
+    model_id: data.model_id,
+    user_id: user.id,
+    subtotal: data.subtotal,
+    iva_rate: data.iva_rate,
+    iva_amount: data.iva_amount,
+    total: data.total,
+    custom_price: data.custom_price || null,
+    notes: data.notes || null,
+    brand_name: data.brand_name || null,
+    model_name: data.model_name || null,
+    description: data.description || null,
+    items: data.items || [],
+    issue_date: data.issue_date,
+    valid_until: data.valid_until,
+  };
+
   const { data: budget, error } = await supabase
     .from("budgets")
-    .insert({
-      budget_number: budgetNumber,
-      company_id: data.company_id,
-      customer_id: data.customer_id,
-      brand_id: data.brand_id,
-      model_id: data.model_id,
-      user_id: user.id,
-      subtotal: data.subtotal,
-      iva_rate: data.iva_rate,
-      iva_amount: data.iva_amount,
-      total: data.total,
-      custom_price: data.custom_price || null,
-      notes: data.notes || null,
-      issue_date: data.issue_date,
-      valid_until: data.valid_until,
-    })
+    .insert(insertData)
     .select()
     .single();
 

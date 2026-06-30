@@ -245,70 +245,98 @@ export default function BudgetViewPage() {
               </p>
             </div>
 
-            <div style={{ marginBottom: 12, fontSize: 11 }}>
-              <strong>DESCRIPCIÓN:</strong><br />
-              Suministro e instalación de {budget.model?.description || budget.model?.name}
-              {" "}Se incluyen los tramos de chimenea y materiales para su instalación, así como el transporte a vertedero autorizado de la caldera retirada.
-            </div>
+            {(() => {
+              const isTemplate = budget.brand_name || (budget.items?.length > 0);
+              const modelName = budget.model_name || budget.model?.name || "";
+              const brandName = budget.brand_name || budget.brand?.name || "";
+              const descText = budget.description || budget.model?.description || budget.model?.name || "";
 
-            <table className="ps-table" style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th style={{ width: 60 }}>Ud.</th>
-                  <th style={{ width: 130, textAlign: "right" }}>Precio</th>
-                  <th style={{ width: 130, textAlign: "right" }}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{budget.model?.name}</td>
-                  <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>1</td>
-                  <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(Number(budget.custom_price || budget.model?.price_final || 0))}</td>
-                  <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(Number(budget.custom_price || budget.model?.price_final || 0))}</td>
-                </tr>
-                {optionals.map((opt) => (
-                  <tr key={opt.id}>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>Opcional: {opt.name}</td>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>1</td>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(opt.price)}</td>
-                    <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(opt.price)}</td>
-                  </tr>
-                ))}
-                <tr><td colSpan={3} style={{ textAlign: "right", fontWeight: 600, padding: "5px 8px", fontSize: 11 }}>SUB-TOTAL</td><td style={{ padding: "5px 8px", fontSize: 11, textAlign: "right" }}>{formatCurrency(budget.subtotal)}</td></tr>
-                <tr><td colSpan={3} style={{ textAlign: "right", padding: "5px 8px", fontSize: 11 }}>IVA 21%</td><td style={{ padding: "5px 8px", fontSize: 11, textAlign: "right" }}>{formatCurrency(budget.iva_amount)}</td></tr>
-                <tr className="total-row"><td colSpan={3} style={{ textAlign: "right", padding: "5px 8px", fontSize: 11 }}>TOTAL</td><td style={{ padding: "5px 8px", fontSize: 11, textAlign: "right" }}>{formatCurrency(budget.total)}</td></tr>
-              </tbody>
-            </table>
+              return (
+                <>
+                  <div style={{ marginBottom: 12, fontSize: 11 }}>
+                    <strong>DESCRIPCIÓN:</strong><br />
+                    {isTemplate ? (
+                      <>Suministro e instalación de {descText}</>
+                    ) : (
+                      <>Suministro e instalación de {budget.model?.description || budget.model?.name}
+                      {" "}Se incluyen los tramos de chimenea y materiales para su instalación, así como el transporte a vertedero autorizado de la caldera retirada.</>
+                    )}
+                  </div>
 
-            <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
-              {(budget.model as any)?.includes?.length > 0 && (
-                <div>
-                  <h4 style={{ color: "#28a745", marginBottom: 8, fontSize: 11 }}>INCLUYE</h4>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
-                    {(budget.model as any).includes?.map((i: any, idx: number) => (
-                      <li key={idx} style={{ listStyle: '"✓ "', color: "#28a745" }}>{i.description}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {(budget.model as any)?.excludes?.length > 0 && (
-                <div>
-                  <h4 style={{ color: "#dc3545", marginBottom: 8, fontSize: 11 }}>NO INCLUYE</h4>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
-                    {(budget.model as any).excludes?.map((e: any, idx: number) => (
-                      <li key={idx} style={{ listStyle: '"✗ "', color: "#dc3545" }}>{e.description}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+                  <table className="ps-table" style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
+                    <thead>
+                      <tr>
+                        <th>Concepto</th>
+                        <th style={{ width: 60 }}>Ud.</th>
+                        <th style={{ width: 130, textAlign: "right" }}>Precio</th>
+                        <th style={{ width: 130, textAlign: "right" }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isTemplate && budget.items?.length > 0 ? (
+                        budget.items.filter((i: any) => i.concepto?.trim()).map((item: any, idx: number) => (
+                          <tr key={idx}>
+                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{item.concepto}</td>
+                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>{item.cantidad}</td>
+                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(item.precio)}</td>
+                            <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(item.cantidad * item.precio)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>{modelName}</td>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>1</td>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(Number(budget.custom_price || budget.model?.price_final || budget.subtotal || 0))}</td>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(Number(budget.custom_price || budget.model?.price_final || budget.subtotal || 0))}</td>
+                        </tr>
+                      )}
+                      {optionals.map((opt) => (
+                        <tr key={opt.id}>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11 }}>Opcional: {opt.name}</td>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "center" }}>1</td>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(opt.price)}</td>
+                          <td style={{ padding: "5px 8px", borderBottom: "1px solid #ddd", fontSize: 11, textAlign: "right" }}>{formatCurrency(opt.price)}</td>
+                        </tr>
+                      ))}
+                      <tr><td colSpan={3} style={{ textAlign: "right", fontWeight: 600, padding: "5px 8px", fontSize: 11 }}>SUB-TOTAL</td><td style={{ padding: "5px 8px", fontSize: 11, textAlign: "right" }}>{formatCurrency(budget.subtotal)}</td></tr>
+                      <tr><td colSpan={3} style={{ textAlign: "right", padding: "5px 8px", fontSize: 11 }}>IVA 21%</td><td style={{ padding: "5px 8px", fontSize: 11, textAlign: "right" }}>{formatCurrency(budget.iva_amount)}</td></tr>
+                      <tr className="total-row"><td colSpan={3} style={{ textAlign: "right", padding: "5px 8px", fontSize: 11 }}>TOTAL</td><td style={{ padding: "5px 8px", fontSize: 11, textAlign: "right" }}>{formatCurrency(budget.total)}</td></tr>
+                    </tbody>
+                  </table>
 
-            {(budget.model as any)?.notes && (
-              <div style={{ background: "#fffde7", borderLeft: "3px solid #f9a825", padding: "8px 12px", marginBottom: 12, fontSize: 10.5 }}>
-                <strong>Nota:</strong> {(budget.model as any).notes}
-              </div>
-            )}
+                  {!isTemplate && (budget.model as any)?.includes?.length > 0 && (
+                    <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
+                      {(budget.model as any)?.includes?.length > 0 && (
+                        <div>
+                          <h4 style={{ color: "#28a745", marginBottom: 8, fontSize: 11 }}>INCLUYE</h4>
+                          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
+                            {(budget.model as any).includes?.map((i: any, idx: number) => (
+                              <li key={idx} style={{ listStyle: '"✓ "', color: "#28a745" }}>{i.description}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {(budget.model as any)?.excludes?.length > 0 && (
+                        <div>
+                          <h4 style={{ color: "#dc3545", marginBottom: 8, fontSize: 11 }}>NO INCLUYE</h4>
+                          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
+                            {(budget.model as any).excludes?.map((e: any, idx: number) => (
+                              <li key={idx} style={{ listStyle: '"✗ "', color: "#dc3545" }}>{e.description}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!isTemplate && (budget.model as any)?.notes && (
+                    <div style={{ background: "#fffde7", borderLeft: "3px solid #f9a825", padding: "8px 12px", marginBottom: 12, fontSize: 10.5 }}>
+                      <strong>Nota:</strong> {(budget.model as any).notes}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             {budget.notes && (
               <div style={{ background: "#fffde7", borderLeft: "3px solid #f9a825", padding: "8px 12px", marginBottom: 12, fontSize: 10.5 }}>
                 <strong>Observaciones:</strong><br />{budget.notes}

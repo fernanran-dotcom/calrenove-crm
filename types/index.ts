@@ -89,6 +89,10 @@ export interface Budget {
   custom_price: number | null;
   notes: string | null;
   pdf_url: string | null;
+  brand_name: string | null;
+  model_name: string | null;
+  description: string | null;
+  items: BudgetItem[];
   created_at: string;
   updated_at: string;
   company?: Company;
@@ -106,6 +110,12 @@ export interface Payment {
   payment_method: string | null;
   notes: string | null;
   created_at: string;
+}
+
+export interface BudgetItem {
+  concepto: string;
+  cantidad: number;
+  precio: number;
 }
 
 export interface BudgetStatusHistory {
