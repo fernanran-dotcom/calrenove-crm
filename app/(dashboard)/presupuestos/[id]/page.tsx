@@ -304,7 +304,7 @@ export default function BudgetViewPage() {
                     </tbody>
                   </table>
 
-                  {!isTemplate && (budget.model as any)?.includes?.length > 0 && (
+                  {((budget.model as any)?.includes?.length > 0 || (budget.model as any)?.excludes?.length > 0) && (
                     <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
                       {(budget.model as any)?.includes?.length > 0 && (
                         <div>
@@ -329,7 +329,7 @@ export default function BudgetViewPage() {
                     </div>
                   )}
 
-                  {!isTemplate && (budget.model as any)?.notes && (
+                  {(budget.model as any)?.notes && (
                     <div style={{ background: "#fffde7", borderLeft: "3px solid #f9a825", padding: "8px 12px", marginBottom: 12, fontSize: 10.5 }}>
                       <strong>Nota:</strong> {(budget.model as any).notes}
                     </div>
