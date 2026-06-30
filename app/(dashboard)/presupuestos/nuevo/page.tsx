@@ -458,8 +458,8 @@ export default function NuevoPresupuestoPage() {
                           </div>
                           <div className="flex-1">
                             <label className="text-[10px] text-muted-foreground block mb-0.5">Precio</label>
-                            <Input type="number" step="0.01" min="0" value={item.precio}
-                              onChange={(e) => updateItem(item.id, "precio", parseFloat(e.target.value) || 0)} className="text-sm h-8 text-right" placeholder="0.00" />
+                            <Input type="number" step="0.01" min="0" value={item.precio || ""}
+                              onChange={(e) => updateItem(item.id, "precio", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)} className="text-sm h-8 text-right" placeholder="0.00" />
                           </div>
                           <div className="flex-1">
                             <label className="text-[10px] text-muted-foreground block mb-0.5">Total</label>
