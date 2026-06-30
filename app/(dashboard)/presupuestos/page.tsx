@@ -45,7 +45,7 @@ export default async function HistorialPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-mobile-card">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium">Nº</th>
@@ -62,15 +62,15 @@ export default async function HistorialPage() {
                 <tbody>
                   {budgets.map((b) => (
                     <tr key={b.id} className="border-b hover:bg-muted/30">
-                      <td className="p-3 font-mono text-xs">{b.budget_number}</td>
-                      <td className="p-3 text-xs">{formatDate(b.issue_date)}</td>
-                      <td className="p-3">{b.customer?.name || "—"}</td>
-                      <td className="p-3 hidden md:table-cell text-xs text-muted-foreground">{b.company?.name}</td>
-                      <td className="p-3 hidden lg:table-cell text-xs text-muted-foreground">{b.model?.name}</td>
-                      <td className="p-3 text-right font-medium">{formatCurrency(b.total)}</td>
-                      <td className="p-3 text-center"><CommercialStatusBadge status={b.commercial_status} /></td>
-                      <td className="p-3 text-center"><PaymentStatusBadge status={b.payment_status} /></td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 font-mono text-xs" data-label="Nº">{b.budget_number}</td>
+                      <td className="p-3 text-xs" data-label="Fecha">{formatDate(b.issue_date)}</td>
+                      <td className="p-3" data-label="Cliente">{b.customer?.name || "—"}</td>
+                      <td className="p-3 hidden md:table-cell text-xs text-muted-foreground" data-label="Empresa">{b.company?.name}</td>
+                      <td className="p-3 hidden lg:table-cell text-xs text-muted-foreground" data-label="Modelo">{b.model?.name}</td>
+                      <td className="p-3 text-right font-medium" data-label="Total">{formatCurrency(b.total)}</td>
+                      <td className="p-3 text-center" data-label="Estado"><CommercialStatusBadge status={b.commercial_status} /></td>
+                      <td className="p-3 text-center" data-label="Cobro"><PaymentStatusBadge status={b.payment_status} /></td>
+                      <td className="p-3 text-center" data-label="">
                         <Link href={`/presupuestos/${b.id}`} className="text-primary underline text-xs">Ver</Link>
                       </td>
                     </tr>

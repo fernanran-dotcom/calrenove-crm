@@ -34,12 +34,49 @@
   body {
     @apply bg-background text-foreground;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 @media print {
   .no-print {
     display: none !important;
+  }
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 640px) {
+  .table-mobile-card thead {
+    display: none;
+  }
+  .table-mobile-card tbody tr {
+    display: block;
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    background: hsl(var(--card));
+  }
+  .table-mobile-card tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border: none;
+    font-size: 13px;
+  }
+  .table-mobile-card tbody td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+  .table-mobile-card tbody td:last-child {
+    padding-bottom: 0;
   }
 }
 

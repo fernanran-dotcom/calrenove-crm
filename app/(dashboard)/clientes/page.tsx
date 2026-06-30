@@ -41,7 +41,7 @@ export default async function ClientesPage() {
             <p className="text-center py-8 text-muted-foreground">No hay clientes registrados.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-mobile-card">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium">Nombre</th>
@@ -56,13 +56,13 @@ export default async function ClientesPage() {
                 <tbody>
                   {customers.map((c) => (
                     <tr key={c.id} className="border-b hover:bg-muted/30">
-                      <td className="p-3 font-medium">{c.name}</td>
-                      <td className="p-3 hidden sm:table-cell text-muted-foreground text-xs">{c.phone || "—"}</td>
-                      <td className="p-3 hidden md:table-cell text-muted-foreground text-xs">{c.email || "—"}</td>
-                      <td className="p-3 text-right">{c.budgetCount}</td>
-                      <td className="p-3 text-right">{formatCurrency(c.totalBudgeted)}</td>
-                      <td className="p-3 text-right text-emerald-600">{formatCurrency(c.totalAccepted)}</td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 font-medium" data-label="Nombre">{c.name}</td>
+                      <td className="p-3 hidden sm:table-cell text-muted-foreground text-xs" data-label="Teléfono">{c.phone || "—"}</td>
+                      <td className="p-3 hidden md:table-cell text-muted-foreground text-xs" data-label="Email">{c.email || "—"}</td>
+                      <td className="p-3 text-right" data-label="Presupuestos">{c.budgetCount}</td>
+                      <td className="p-3 text-right" data-label="Total presupuestado">{formatCurrency(c.totalBudgeted)}</td>
+                      <td className="p-3 text-right text-emerald-600" data-label="Aceptado">{formatCurrency(c.totalAccepted)}</td>
+                      <td className="p-3 text-center" data-label="">
                         <Link href={`/presupuestos?cliente=${encodeURIComponent(c.name)}`} className="text-xs text-primary underline">Ver presupuestos</Link>
                       </td>
                     </tr>

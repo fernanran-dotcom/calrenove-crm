@@ -36,10 +36,11 @@ export function Sidebar() {
   return (
     <>
       <button
-        className="fixed top-3 left-3 z-50 lg:hidden no-print"
+        className="fixed top-2 left-2 z-50 lg:hidden no-print bg-background/80 backdrop-blur-sm rounded-lg p-2 shadow-sm border"
         onClick={() => setOpen(!open)}
+        aria-label={open ? "Cerrar menú" : "Abrir menú"}
       >
-        {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
 
       <aside

@@ -67,7 +67,7 @@ export default async function CobrosPage() {
             <p className="text-center py-8 text-muted-foreground">No hay presupuestos aceptados.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-mobile-card">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium">Nº</th>
@@ -86,14 +86,14 @@ export default async function CobrosPage() {
                     const pending = Number(b.total) - paid;
                     return (
                       <tr key={b.id} className="border-b hover:bg-muted/30">
-                        <td className="p-3 font-mono text-xs">{b.budget_number}</td>
-                        <td className="p-3">{b.customer?.name || "—"}</td>
-                        <td className="p-3 hidden md:table-cell text-xs text-muted-foreground">{b.company?.name}</td>
-                        <td className="p-3 text-right">{formatCurrency(b.total)}</td>
-                        <td className="p-3 text-right text-emerald-600">{formatCurrency(paid)}</td>
-                        <td className="p-3 text-right text-amber-600">{formatCurrency(pending)}</td>
-                        <td className="p-3 text-center"><PaymentStatusBadge status={b.payment_status} /></td>
-                        <td className="p-3 text-center">
+                        <td className="p-3 font-mono text-xs" data-label="Nº">{b.budget_number}</td>
+                        <td className="p-3" data-label="Cliente">{b.customer?.name || "—"}</td>
+                        <td className="p-3 hidden md:table-cell text-xs text-muted-foreground" data-label="Empresa">{b.company?.name}</td>
+                        <td className="p-3 text-right" data-label="Total">{formatCurrency(b.total)}</td>
+                        <td className="p-3 text-right text-emerald-600" data-label="Cobrado">{formatCurrency(paid)}</td>
+                        <td className="p-3 text-right text-amber-600" data-label="Pendiente">{formatCurrency(pending)}</td>
+                        <td className="p-3 text-center" data-label="Estado"><PaymentStatusBadge status={b.payment_status} /></td>
+                        <td className="p-3 text-center" data-label="">
                           <Link href={`/presupuestos/${b.id}`} className="text-primary underline text-xs">Gestionar</Link>
                         </td>
                       </tr>

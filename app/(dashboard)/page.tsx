@@ -60,23 +60,23 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
         {metrics.map((m) => (
           <Card key={m.label}>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider leading-tight">
                 {m.label}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <p className={`text-2xl font-bold ${m.color || ""}`}>{m.value}</p>
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <p className={`text-lg sm:text-2xl font-bold ${m.color || ""}`}>{m.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <h2 className="text-lg font-semibold mt-8 mb-3">Accesos rápidos</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <h2 className="text-base sm:text-lg font-semibold mt-6 sm:mt-8 mb-2 sm:mb-3">Accesos rápidos</h2>
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {quickActions.map((a) => {
           const Icon = a.icon;
           return (

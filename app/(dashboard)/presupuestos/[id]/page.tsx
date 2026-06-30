@@ -156,12 +156,12 @@ export default function BudgetViewPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-4">
       <div className="flex flex-wrap gap-2 no-print">
-        <Button variant="outline" onClick={() => window.print()}>Imprimir / PDF</Button>
-        <Button variant="success" onClick={generatePDF} disabled={pdfGenerating}>
-          {pdfGenerating ? "Generando..." : "Compartir"}
+        <Button variant="outline" size="sm" onClick={() => window.print()}>Imprimir</Button>
+        <Button variant="success" size="sm" onClick={generatePDF} disabled={pdfGenerating}>
+          {pdfGenerating ? "..." : "Compartir"}
         </Button>
-        <Button variant="outline" onClick={() => router.push("/presupuestos/nuevo")}>Nuevo</Button>
-        <Button variant="outline" onClick={() => router.push("/presupuestos")}>Historial</Button>
+        <Button variant="outline" size="sm" onClick={() => router.push("/presupuestos/nuevo")}>Nuevo</Button>
+        <Button variant="outline" size="sm" onClick={() => router.push("/presupuestos")}>Historial</Button>
       </div>
 
       {showShare && (
