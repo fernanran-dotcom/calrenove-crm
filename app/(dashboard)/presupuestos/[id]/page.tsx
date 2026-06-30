@@ -54,7 +54,7 @@ export default function BudgetViewPage() {
     load();
   }, [id]);
 
-  const handleStatusChange = async (status: "accepted" | "rejected") => {
+  const handleStatusChange = async (status: "pending" | "accepted" | "rejected") => {
     if (!budget) return;
     await updateCommercialStatus(budget.id, status);
     setBudget((prev) => prev ? { ...prev, commercial_status: status } : prev);
@@ -191,8 +191,20 @@ export default function BudgetViewPage() {
             <Button size="sm" variant="destructive" onClick={() => handleStatusChange("rejected")}>Rechazar</Button>
           </>
         )}
-        {budget.commercial_status === "accepted" && budget.payment_status !== "paid" && (
-          <Button size="sm" onClick={() => setShowPayment(true)}>Registrar cobro</Button>
+        {budget.commercial_status === "accepted" && (
+          <>
+            <Button size="sm" variant="destructive" onClick={() => handleStatusChange("rejected")}>Rechazar</Button>
+            <Button size="sm" variant="outline" onClick={() => handleStatusChange("pending")}>Volver a pendiente</Button>
+            {budget.payment_status !== "paid" && (
+              <Button size="sm" onClick={() => setShowPayment(true)}>Registrar cobro</Button>
+            )}
+          </>
+        )}
+        {budget.commercial_status === "rejected" && (
+          <>
+            <Button size="sm" variant="success" onClick={() => handleStatusChange("accepted")}>Aceptar</Button>
+            <Button size="sm" variant="outline" onClick={() => handleStatusChange("pending")}>Volver a pendiente</Button>
+          </>
         )}
       </div>
 

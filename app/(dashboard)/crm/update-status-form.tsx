@@ -19,20 +19,29 @@ export function UpdateStatusForm({
     router.refresh();
   }
 
-  if (currentStatus !== "pending") return null;
-
   return (
-    <div className="flex gap-1">
-      <form action={() => handleAction("accepted")}>
-        <Button type="submit" size="sm" variant="success" className="h-7 text-xs px-2">
-          Aceptar
-        </Button>
-      </form>
-      <form action={() => handleAction("rejected")}>
-        <Button type="submit" size="sm" variant="destructive" className="h-7 text-xs px-2">
-          Rechazar
-        </Button>
-      </form>
+    <div className="flex gap-1 flex-wrap">
+      {currentStatus !== "accepted" && (
+        <form action={() => handleAction("accepted")}>
+          <Button type="submit" size="sm" variant="success" className="h-7 text-xs px-2">
+            Aceptar
+          </Button>
+        </form>
+      )}
+      {currentStatus !== "rejected" && (
+        <form action={() => handleAction("rejected")}>
+          <Button type="submit" size="sm" variant="destructive" className="h-7 text-xs px-2">
+            Rechazar
+          </Button>
+        </form>
+      )}
+      {currentStatus !== "pending" && (
+        <form action={() => handleAction("pending")}>
+          <Button type="submit" size="sm" variant="outline" className="h-7 text-xs px-2">
+            Pendiente
+          </Button>
+        </form>
+      )}
     </div>
   );
 }
