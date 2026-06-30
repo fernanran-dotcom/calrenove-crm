@@ -440,25 +440,34 @@ export default function NuevoPresupuestoPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {items.map((item) => (
-                      <div key={item.id} className="flex gap-2 items-start">
-                        <div className="flex-1">
-                          <Input value={item.concepto} onChange={(e) => updateItem(item.id, "concepto", e.target.value)} placeholder="Concepto" className="text-sm" />
+                      <div key={item.id} className="border rounded-lg p-3 space-y-2 bg-muted/20">
+                        <div className="flex gap-2 items-start">
+                          <div className="flex-1 min-w-0">
+                            <Input value={item.concepto} onChange={(e) => updateItem(item.id, "concepto", e.target.value)} placeholder="Concepto" className="text-sm h-9" />
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.id)}
+                            disabled={items.length === 1} className="h-9 w-9 text-destructive shrink-0">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="w-20">
-                          <Input type="number" min="1" value={item.cantidad}
-                            onChange={(e) => updateItem(item.id, "cantidad", parseInt(e.target.value) || 1)} className="text-sm text-center" />
+                        <div className="flex gap-2 items-center">
+                          <div className="flex-1">
+                            <label className="text-[10px] text-muted-foreground block mb-0.5">Cantidad</label>
+                            <Input type="number" min="1" value={item.cantidad}
+                              onChange={(e) => updateItem(item.id, "cantidad", parseInt(e.target.value) || 1)} className="text-sm h-8 text-center" />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-[10px] text-muted-foreground block mb-0.5">Precio</label>
+                            <Input type="number" step="0.01" min="0" value={item.precio}
+                              onChange={(e) => updateItem(item.id, "precio", parseFloat(e.target.value) || 0)} className="text-sm h-8 text-right" placeholder="0.00" />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-[10px] text-muted-foreground block mb-0.5">Total</label>
+                            <div className="text-sm font-medium h-8 flex items-center justify-end px-2">
+                              {formatCurrency(item.cantidad * item.precio)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="w-28">
-                          <Input type="number" step="0.01" min="0" value={item.precio}
-                            onChange={(e) => updateItem(item.id, "precio", parseFloat(e.target.value) || 0)} className="text-sm text-right" placeholder="0.00" />
-                        </div>
-                        <div className="w-24 text-right pt-2 text-sm font-medium">
-                          {formatCurrency(item.cantidad * item.precio)}
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.id)}
-                          disabled={items.length === 1} className="h-9 w-9 text-destructive shrink-0">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     ))}
                   </CardContent>
