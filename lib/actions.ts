@@ -46,6 +46,36 @@ export async function register(formData: FormData) {
   return { success: true, user: data.user };
 }
 
+export async function requestPasswordReset(formData: FormData) {
+  const supabase = await createClient();
+  const email = formData.get("email") as string;
+
+  const redirectTo = typeof window !== "undefined"
+    ? `${window.location.origin}/auth/callback?next=/reset-password`
+    : "https://calrenove-main.vercel.app/auth/callback?next=/reset-password";
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function updatePassword(formData: FormData) {
+  const supabase = await createClient();
+  const password = formData.get("password") as string;
+  const confirm = formData.get("confirm") as string;
+
+  if (password !== confirm) return { error: "Las contraseñas no coinciden" };
+  if (password.length < 6) return { error: "La contraseña debe tener al menos 6 caracteres" };
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: error.message };
+
+  return { success: true };
+}
+
 export async function getNextBudgetNumber() {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_next_budget_number");

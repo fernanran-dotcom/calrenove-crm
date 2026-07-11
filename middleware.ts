@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (!user && pathname !== "/login" && pathname !== "/auth/callback") {
+  if (!user && pathname !== "/login" && pathname !== "/auth/callback" && pathname !== "/reset-password") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
