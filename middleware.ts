@@ -26,18 +26,23 @@ export async function middleware(request: NextRequest) {
   );
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { pathname } = request.nextUrl;
 
-  if (!user && pathname !== "/login" && pathname !== "/auth/callback" && pathname !== "/reset-password") {
+  const isPublicRoute =
+    pathname === "/login" ||
+    pathname === "/auth/callback" ||
+    pathname === "/reset-password";
+
+  if (!session && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname.startsWith("/login")) {
+  if (session && pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
