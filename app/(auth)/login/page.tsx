@@ -22,6 +22,9 @@ export default function LoginPage() {
     setSuccess("");
 
     const formData = new FormData(e.currentTarget);
+    const emailInput = formData.get("email") as string;
+    const normalized = emailInput.includes("@") ? emailInput : `${emailInput.trim()}@calrenove.com`;
+    formData.set("email", normalized);
 
     if (mode === "login") {
       const result = await login(formData);
@@ -87,8 +90,15 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="tu@email.com" required />
+            <Label htmlFor="email">{mode === "login" ? "Usuario" : "Email"}</Label>
+            <Input
+              id="email"
+              name="email"
+              type={mode === "login" ? "text" : "email"}
+              placeholder={mode === "login" ? "andoni" : "tu@email.com"}
+              required
+              autoComplete="username"
+            />
           </div>
           {mode !== "forgot" && (
             <div className="space-y-2">
