@@ -11,9 +11,12 @@ create policy "Users can upload brochures"
 on storage.objects for insert
 with check (bucket_id = 'brochures' and auth.role() = 'authenticated');
 
+-- WITH CHECK is required: the app uploads with upsert (INSERT ON CONFLICT DO UPDATE),
+-- which validates the new row against UPDATE policies' WITH CHECK expressions.
 create policy "Users can update brochures"
 on storage.objects for update
-using (bucket_id = 'brochures' and auth.role() = 'authenticated');
+using (bucket_id = 'brochures' and auth.role() = 'authenticated')
+with check (bucket_id = 'brochures' and auth.role() = 'authenticated');
 
 create policy "Users can delete brochures"
 on storage.objects for delete

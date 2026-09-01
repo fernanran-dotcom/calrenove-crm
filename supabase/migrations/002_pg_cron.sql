@@ -26,6 +26,20 @@ with check (
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
+-- Allow authenticated users to overwrite their own PDFs (upsert requires WITH CHECK)
+create policy "Users can update their own PDFs"
+on storage.objects for update
+using (
+  bucket_id = 'pdfs' and
+  auth.role() = 'authenticated' and
+  (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'pdfs' and
+  auth.role() = 'authenticated' and
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
 -- Allow authenticated users to read their own PDFs
 create policy "Users can read their own PDFs"
 on storage.objects for select
