@@ -86,25 +86,70 @@ export default function BudgetViewPage() {
     setBudget((prev) => prev ? { ...prev, payment_status: status } : prev);
   };
 
+  const getFileName = () =>
+    `Presupuesto_${budget!.budget_number}_${budget!.customer?.name?.replace(/[^a-z0-9]/gi, "_")}.pdf`;
+
+  const buildPdfBlob = async (): Promise<Blob> => {
+    const html2pdf = (await import("html2pdf.js")).default;
+    const el = pdfRef.current!;
+    const budgetBlob = await (html2pdf as any)()
+      .set({
+        margin: [5, 5, 5, 5],
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(el)
+      .outputPdf("blob");
+
+    const brochureUrl = (budget!.model as any)?.brochure_url as string | null | undefined;
+    if (!brochureUrl) return budgetBlob;
+
+    try {
+      const resp = await fetch(brochureUrl);
+      if (!resp.ok) return budgetBlob;
+      const { PDFDocument } = await import("pdf-lib");
+      const budgetDoc = await PDFDocument.load(await budgetBlob.arrayBuffer());
+      const brochureDoc = await PDFDocument.load(await resp.arrayBuffer());
+      const pages = await budgetDoc.copyPages(brochureDoc, brochureDoc.getPageIndices());
+      pages.forEach((p) => budgetDoc.addPage(p));
+      const merged = await budgetDoc.save();
+      const arrayBuffer = new ArrayBuffer(merged.byteLength);
+      new Uint8Array(arrayBuffer).set(merged);
+      return new Blob([arrayBuffer], { type: "application/pdf" });
+    } catch {
+      return budgetBlob;
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!pdfRef.current) return;
+    setPdfGenerating(true);
+    try {
+      const pdfBlob = await buildPdfBlob();
+      const url = URL.createObjectURL(pdfBlob);
+      const w = window.open(url, "_blank");
+      if (!w) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = getFileName();
+        a.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+    } catch {
+      window.print();
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
   const generatePDF = async () => {
     if (!pdfRef.current) return;
     setPdfGenerating(true);
 
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
-      const el = pdfRef.current;
-      const fileName = `Presupuesto_${budget!.budget_number}_${budget!.customer?.name?.replace(/[^a-z0-9]/gi, "_")}.pdf`;
-
-      const pdfBlob = await (html2pdf as any)()
-        .set({
-          margin: [5, 5, 5, 5],
-          filename: fileName,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        })
-        .from(el)
-        .outputPdf("blob");
+      const fileName = getFileName();
+      const pdfBlob = await buildPdfBlob();
 
       const url = URL.createObjectURL(pdfBlob);
       const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
@@ -156,7 +201,9 @@ export default function BudgetViewPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-4">
       <div className="flex flex-wrap gap-2 no-print">
-        <Button variant="outline" size="sm" onClick={() => window.print()}>Imprimir</Button>
+        <Button variant="outline" size="sm" onClick={handlePrint} disabled={pdfGenerating}>
+          {pdfGenerating ? "Generando..." : "Imprimir / PDF"}
+        </Button>
         <Button variant="success" size="sm" onClick={generatePDF} disabled={pdfGenerating}>
           {pdfGenerating ? "..." : "Compartir"}
         </Button>
@@ -219,6 +266,24 @@ export default function BudgetViewPage() {
                 <p key={p.id}>{formatDate(p.payment_date)} — {formatCurrency(p.amount)}{p.payment_method ? ` (${p.payment_method})` : ""}</p>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(budget.model as any)?.brochure_url && (
+        <Card className="no-print">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-sm font-medium">Folleto del equipo — se añade automáticamente al final del PDF al imprimir o compartir</p>
+              <Button size="sm" variant="outline" onClick={() => window.open((budget.model as any).brochure_url, "_blank")}>
+                Abrir folleto
+              </Button>
+            </div>
+            <iframe
+              src={(budget.model as any).brochure_url}
+              title="Folleto del equipo"
+              className="w-full h-96 rounded-md border bg-white"
+            />
           </CardContent>
         </Card>
       )}

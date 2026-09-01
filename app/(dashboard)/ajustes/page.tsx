@@ -54,6 +54,18 @@ export default async function AjustesPage() {
       </Card>
 
       <Card>
+        <CardHeader><CardTitle>Folletos de equipos</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Sube el PDF de cada caldera o aire acondicionado. Se añadirá al final del presupuesto al imprimir o compartir.
+          </p>
+          <Link href="/ajustes/folletos" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow h-9 px-4 py-2 text-sm font-medium hover:bg-primary/90">
+            Gestionar folletos
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle>Recordatorios de cobro</CardTitle></CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">

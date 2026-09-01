@@ -26,6 +26,7 @@ export interface BoilerModel {
   price_final: number;
   price_rounded: number;
   notes: string | null;
+  brochure_url: string | null;
   brand?: BoilerBrand;
   includes?: ModelInclude[];
   excludes?: ModelExclude[];
