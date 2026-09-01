@@ -387,30 +387,55 @@ export default function BudgetViewPage() {
                     </tbody>
                   </table>
 
-                  {((budget.model as any)?.includes?.length > 0 || (budget.model as any)?.excludes?.length > 0) && (
-                    <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
-                      {(budget.model as any)?.includes?.length > 0 && (
-                        <div>
-                          <h4 style={{ color: "#28a745", marginBottom: 8, fontSize: 11 }}>INCLUYE</h4>
-                          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
-                            {(budget.model as any).includes?.map((i: any, idx: number) => (
-                              <li key={idx} style={{ listStyle: '"✓ "', color: "#28a745" }}>{i.description}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {(budget.model as any)?.excludes?.length > 0 && (
-                        <div>
-                          <h4 style={{ color: "#dc3545", marginBottom: 8, fontSize: 11 }}>NO INCLUYE</h4>
-                          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
-                            {(budget.model as any).excludes?.map((e: any, idx: number) => (
-                              <li key={idx} style={{ listStyle: '"✗ "', color: "#dc3545" }}>{e.description}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {(() => {
+                    const norm = (s: string) =>
+                      (s || "")
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9 ]/g, " ")
+                        .replace(/\s+/g, " ")
+                        .trim();
+
+                    const optionalNames = optionals.map((o) => norm(o.name)).filter(Boolean);
+
+                    const allExcludes = (budget.model as any)?.excludes || [];
+                    const filteredExcludes = allExcludes.filter((e: any) => {
+                      const en = norm(e.description);
+                      if (!en) return true;
+                      return !optionalNames.some((on) => on && (en === on || en.includes(on) || on.includes(en)));
+                    });
+
+                    const hasIncludes = ((budget.model as any)?.includes?.length || 0) > 0 || optionalNames.length > 0;
+
+                    return (
+                      <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
+                        {hasIncludes && (
+                          <div>
+                            <h4 style={{ color: "#28a745", marginBottom: 8, fontSize: 11 }}>INCLUYE</h4>
+                            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
+                              {(budget.model as any).includes?.map((i: any, idx: number) => (
+                                <li key={idx} style={{ listStyle: '"✓ "', color: "#28a745" }}>{i.description}</li>
+                              ))}
+                              {optionals.map((o) => (
+                                <li key={o.id} style={{ listStyle: '"✓ "', color: "#28a745" }}>{o.name} (incluido como opcional)</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {filteredExcludes.length > 0 && (
+                          <div>
+                            <h4 style={{ color: "#dc3545", marginBottom: 8, fontSize: 11 }}>NO INCLUYE</h4>
+                            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5 }}>
+                              {filteredExcludes.map((e: any, idx: number) => (
+                                <li key={idx} style={{ listStyle: '"✗ "', color: "#dc3545" }}>{e.description}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {(budget.model as any)?.notes && (
                     <div style={{ background: "#fffde7", borderLeft: "3px solid #f9a825", padding: "8px 12px", marginBottom: 12, fontSize: 10.5 }}>
