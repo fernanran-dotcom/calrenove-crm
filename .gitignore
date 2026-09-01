@@ -10,3 +10,5 @@ supabase/seeds/*_fixed.sql
 
 .vercel
 .env*
+
+*.traineddata
