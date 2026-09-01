@@ -1,0 +1,22 @@
+# Calrenove CRM - Despliegue en NAS Synology (Container Manager -> Proyecto)
+#
+# Uso:
+#   1) Copiar este proyecto en /volume1/docker/calrenove-crm/
+#   2) Crear .env junto a este fichero (ver .env.nas.example)
+#   3) docker compose up -d --build
+#   4) App en http://IP_NAS:8100  (o via proxy inverso: https://crm.nascalrenove.synology.me)
+#
+services:
+  calrenove-crm:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: calrenove-crm
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8100}:3000"
+    environment:
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - NODE_ENV=production

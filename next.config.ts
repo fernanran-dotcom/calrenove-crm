@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.supabase.co" },
