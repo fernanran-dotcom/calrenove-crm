@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -50,12 +51,18 @@ export async function requestPasswordReset(formData: FormData) {
   const supabase = await createClient();
   const email = formData.get("email") as string;
 
-  const redirectTo = typeof window !== "undefined"
-    ? `${window.location.origin}/auth/callback?next=/reset-password`
-    : "https://calrenove-main.vercel.app/auth/callback?next=/reset-password";
+  let origin = "https://calrenove-main.vercel.app";
+  try {
+    const hdrs = await headers();
+    const host = hdrs.get("x-forwarded-host") || hdrs.get("host");
+    if (host) {
+      const proto = hdrs.get("x-forwarded-proto") || "https";
+      origin = `${proto}://${host}`;
+    }
+  } catch {}
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo,
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
   });
 
   if (error) return { error: error.message };
