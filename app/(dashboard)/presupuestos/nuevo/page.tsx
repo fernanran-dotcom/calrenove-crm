@@ -38,6 +38,7 @@ export default function NuevoPresupuestoPage() {
   const [customPrice, setCustomPrice] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedOptionals, setSelectedOptionals] = useState<string[]>([]);
+  const [optionalPrices, setOptionalPrices] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const [clientName, setClientName] = useState("");
@@ -94,7 +95,13 @@ export default function NuevoPresupuestoPage() {
   }, [modelId, models]);
 
   const basePrice = customPrice ? parseFloat(customPrice) : (selectedModel?.price_final || 0);
-  const optTotal = optionals.filter((o) => selectedOptionals.includes(o.id)).reduce((s, o) => s + o.price, 0);
+  const getOptionalPrice = (o: { id: string; price: number }) => {
+    const raw = optionalPrices[o.id];
+    if (raw === undefined || raw === "") return o.price;
+    const parsed = parseFloat(raw);
+    return isNaN(parsed) ? o.price : parsed;
+  };
+  const optTotal = optionals.filter((o) => selectedOptionals.includes(o.id)).reduce((s, o) => s + getOptionalPrice(o), 0);
   const catalogoSubtotal = basePrice + optTotal;
   const catalogoIva = catalogoSubtotal * 0.21;
   const catalogoTotal = catalogoSubtotal + catalogoIva;
@@ -233,7 +240,7 @@ export default function NuevoPresupuestoPage() {
           valid_until: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
           selected_optionals: optionals
             .filter((o) => selectedOptionals.includes(o.id))
-            .map((o) => ({ optional_id: o.id, name: o.name, price: o.price })),
+            .map((o) => ({ optional_id: o.id, name: o.name, price: getOptionalPrice(o) })),
         });
         router.push(`/presupuestos/${budget.id}`);
       }
@@ -399,15 +406,46 @@ export default function NuevoPresupuestoPage() {
                 </div>
                 {optionals.length > 0 && (
                   <div>
-                    <p className="text-sm font-medium mb-1">Opcionales:</p>
-                    {optionals.map((o) => (
-                      <label key={o.id} className="flex items-center gap-2 text-sm py-1">
-                        <input type="checkbox" checked={selectedOptionals.includes(o.id)}
-                          onChange={() => setSelectedOptionals((prev) => prev.includes(o.id) ? prev.filter((id) => id !== o.id) : [...prev, o.id])}
-                          className="rounded" />
-                        {o.name} (+{formatCurrency(o.price)})
-                      </label>
-                    ))}
+                    <p className="text-sm font-medium mb-1">Opcionales (precio editable):</p>
+                    {optionals.map((o) => {
+                      const checked = selectedOptionals.includes(o.id);
+                      return (
+                        <div key={o.id} className="flex items-center gap-2 text-sm py-1 flex-wrap">
+                          <label className="flex items-center gap-2 min-w-0 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedOptionals((prev) =>
+                                  prev.includes(o.id) ? prev.filter((id) => id !== o.id) : [...prev, o.id]
+                                );
+                                setOptionalPrices((prev) =>
+                                  prev[o.id] !== undefined ? prev : { ...prev, [o.id]: o.price.toString() }
+                                );
+                              }}
+                              className="rounded shrink-0"
+                            />
+                            <span className="min-w-0">{o.name}</span>
+                          </label>
+                          {checked && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">Precio:</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={optionalPrices[o.id] ?? o.price}
+                                onChange={(e) =>
+                                  setOptionalPrices((prev) => ({ ...prev, [o.id]: e.target.value }))
+                                }
+                                className="w-24 h-8 text-sm text-right"
+                              />
+                              <span className="text-xs">€</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
