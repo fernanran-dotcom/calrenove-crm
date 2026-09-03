@@ -62,6 +62,7 @@ export interface Customer {
   phone: string | null;
   address: string | null;
   email: string | null;
+  dni: string | null;
   created_at: string;
   updated_at: string;
 }

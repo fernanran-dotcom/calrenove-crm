@@ -44,6 +44,7 @@ export default function NuevoPresupuestoPage() {
   const [clientPhone, setClientPhone] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [clientEmail, setClientEmail] = useState("");
+  const [clientDni, setClientDni] = useState("");
 
   // Custom brand fields
   const [customBrandName, setCustomBrandName] = useState("");
@@ -150,6 +151,7 @@ export default function NuevoPresupuestoPage() {
           phone: clientPhone.trim() || null,
           address: clientAddress.trim() || null,
           email: clientEmail.trim() || null,
+          dni: clientDni.trim() || null,
         })
         .select()
         .single();
@@ -282,10 +284,14 @@ export default function NuevoPresupuestoPage() {
               <Input value={clientName} onChange={(e) => setClientName(e.target.value)} required />
             </div>
             <div>
+              <Label>DNI (opcional)</Label>
+              <Input value={clientDni} onChange={(e) => setClientDni(e.target.value)} placeholder="12345678A" />
+            </div>
+            <div>
               <Label>Teléfono</Label>
               <Input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <Label>Email</Label>
               <Input type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} />
             </div>

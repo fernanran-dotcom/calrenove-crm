@@ -45,6 +45,7 @@ export default async function ClientesPage() {
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium">Nombre</th>
+                    <th className="text-left p-3 font-medium hidden lg:table-cell">DNI</th>
                     <th className="text-left p-3 font-medium hidden sm:table-cell">Teléfono</th>
                     <th className="text-left p-3 font-medium hidden md:table-cell">Email</th>
                     <th className="text-right p-3 font-medium">Presupuestos</th>
@@ -57,6 +58,7 @@ export default async function ClientesPage() {
                   {customers.map((c) => (
                     <tr key={c.id} className="border-b hover:bg-muted/30">
                       <td className="p-3 font-medium" data-label="Nombre">{c.name}</td>
+                      <td className="p-3 hidden lg:table-cell text-muted-foreground text-xs" data-label="DNI">{c.dni || "—"}</td>
                       <td className="p-3 hidden sm:table-cell text-muted-foreground text-xs" data-label="Teléfono">{c.phone || "—"}</td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground text-xs" data-label="Email">{c.email || "—"}</td>
                       <td className="p-3 text-right" data-label="Presupuestos">{c.budgetCount}</td>
