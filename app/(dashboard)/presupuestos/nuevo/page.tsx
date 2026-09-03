@@ -291,7 +291,7 @@ export default function NuevoPresupuestoPage() {
               <Input value={clientName} onChange={(e) => setClientName(e.target.value)} required />
             </div>
             <div>
-              <Label>DNI (opcional)</Label>
+              <Label>DNI</Label>
               <Input value={clientDni} onChange={(e) => setClientDni(e.target.value)} placeholder="12345678A" />
             </div>
             <div>
