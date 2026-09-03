@@ -316,7 +316,9 @@ export default function BudgetViewPage() {
               <h3>DATOS DEL CLIENTE</h3>
               <p style={{ margin: 0, fontSize: 11 }}>
                 <strong>{budget.customer?.name}</strong><br />
-                {budget.customer?.dni ? `DNI: ${budget.customer.dni}` + (budget.customer.address || budget.customer.phone || budget.customer.email ? <br /> : "") : ""}
+                {budget.customer?.dni && (
+                  <>DNI: {budget.customer.dni}<br /></>
+                )}
                 {budget.customer?.address}{budget.customer?.address ? <br /> : ""}
                 {budget.customer?.phone ? `Tel.: ${budget.customer?.phone}` : ""}
                 {budget.customer?.email ? ` | Email: ${budget.customer?.email}` : ""}
