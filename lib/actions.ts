@@ -139,8 +139,8 @@ export async function updateCommercialStatus(
 ) {
   const userId = await requireUser();
 
-  const current = await queryOne<{ commercial_status: string }>(
-    "SELECT commercial_status FROM public.budgets WHERE id = $1 AND user_id = $2",
+  const current = await queryOne<{ commercial_status: string; payment_status: string }>(
+    "SELECT commercial_status, payment_status FROM public.budgets WHERE id = $1 AND user_id = $2",
     [budgetId, userId]
   );
   if (!current) throw new Error("Presupuesto no encontrado");
@@ -158,7 +158,11 @@ export async function updateCommercialStatus(
       newStatus,
       newStatus === "accepted" ? now : null,
       newStatus === "rejected" ? now : null,
-      newStatus === "rejected" ? "paid" : newStatus === "pending" ? "pending" : null,
+      newStatus === "rejected"
+        ? "paid"
+        : newStatus === "pending"
+          ? "pending"
+          : current.payment_status || "pending",
       budgetId,
     ]
   );
