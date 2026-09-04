@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/layout/providers";
 import { SWRegister } from "@/components/layout/sw-register";
+import { InstallPrompt } from "@/components/layout/install-prompt";
 
 export const metadata: Metadata = {
   title: "Calrenove CRM",
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>{children}</Providers>
         <SWRegister />
+        <InstallPrompt />
       </body>
     </html>
   );
