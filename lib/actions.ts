@@ -206,7 +206,10 @@ export async function registerPayment(data: {
 
     const totalPaid = Number(paidRow.rows[0]?.total || 0);
     const budgetTotal = Number(budgetRow.rows[0]?.total || 0);
-    const status = totalPaid >= budgetTotal ? "paid" : totalPaid > 0 ? "partial" : "pending";
+    const totalPaidCents = Math.round(totalPaid * 100);
+    const budgetTotalCents = Math.round(budgetTotal * 100);
+    const status =
+      totalPaidCents >= budgetTotalCents ? "paid" : totalPaidCents > 0 ? "partial" : "pending";
 
     await tx.query(
       "UPDATE public.budgets SET payment_status = $1, updated_at = now() WHERE id = $2",

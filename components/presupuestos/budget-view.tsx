@@ -182,6 +182,11 @@ export function BudgetView({
     const amount = parseFloat(payAmount);
     if (!amount || amount <= 0) return;
 
+    const amountCents = Math.round(amount * 100);
+    const newPaidCents =
+      Math.round(localPayments.reduce((s, p) => s + Number(p.amount), 0) * 100) + amountCents;
+    const totalCents = Math.round(Number(budget.total) * 100);
+
     await registerPayment({
       budget_id: budget.id,
       amount,
@@ -189,15 +194,17 @@ export function BudgetView({
       payment_method: payMethod || undefined,
     });
 
-    const newPaid = localPayments.reduce((s, p) => s + p.amount, 0) + amount;
     setLocalPayments([...localPayments, { id: crypto.randomUUID(), amount, payment_date: new Date().toISOString().split("T")[0], payment_method: payMethod || null }]);
-    setLocalPaymentStatus(newPaid >= budget.total ? "paid" : newPaid > 0 ? "partial" : "pending");
+    setLocalPaymentStatus(newPaidCents >= totalCents ? "paid" : newPaidCents > 0 ? "partial" : "pending");
     setShowPayment(false);
     setPayAmount("");
     setPayMethod("");
   };
 
-  const pending = budget.total - localPayments.reduce((s, p) => s + p.amount, 0);
+  const pending = Math.max(
+    0,
+    Math.round(Number(budget.total) * 100) - Math.round(localPayments.reduce((s, p) => s + Number(p.amount), 0) * 100)
+  ) / 100;
 
   const estadoClass = (() => {
     if (localStatus === "accepted") return "border-emerald-500";
