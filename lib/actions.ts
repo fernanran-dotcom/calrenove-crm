@@ -2,7 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne, withTransaction } from "@/lib/db";
 import { createSessionToken, COOKIE_NAME, getSessionUser } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -100,34 +100,40 @@ export async function createBudget(data: {
 }) {
   const userId = await requireUser();
 
-  const numRow = await queryOne<{ next: string }>("SELECT public.get_next_budget_number() AS next");
-  const budgetNumber = numRow!.next;
+  const budget = await withTransaction(async (tx) => {
+    const numRow = await tx.query<{ next: string }>("SELECT public.get_next_budget_number() AS next");
+    const budgetNumber = numRow.rows[0].next;
 
-  const budget = await queryOne<{ id: string }>(
-    `INSERT INTO public.budgets
-      (budget_number, company_id, customer_id, brand_id, model_id, user_id,
-       subtotal, iva_rate, iva_amount, total, custom_price, notes,
-       brand_name, model_name, description, items, issue_date, valid_until)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-     RETURNING id`,
-    [
-      budgetNumber, data.company_id, data.customer_id, data.brand_id, data.model_id, userId,
-      data.subtotal, data.iva_rate, data.iva_amount, data.total,
-      data.custom_price || null, data.notes || null,
-      data.brand_name || null, data.model_name || null, data.description || null,
-      JSON.stringify(data.items || []), data.issue_date, data.valid_until,
-    ]
-  );
-  if (!budget) throw new Error("No se pudo crear el presupuesto");
+    const inserted = await tx.query<{ id: string }>(
+      `INSERT INTO public.budgets
+        (budget_number, company_id, customer_id, brand_id, model_id, user_id,
+         subtotal, iva_rate, iva_amount, total, custom_price, notes,
+         brand_name, model_name, description, items, issue_date, valid_until)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       RETURNING id`,
+      [
+        budgetNumber, data.company_id, data.customer_id, data.brand_id, data.model_id, userId,
+        data.subtotal, data.iva_rate, data.iva_amount, data.total,
+        data.custom_price || null, data.notes || null,
+        data.brand_name || null, data.model_name || null, data.description || null,
+        JSON.stringify(data.items || []), data.issue_date, data.valid_until,
+      ]
+    );
+    const budgetRow = inserted.rows[0];
+    if (!budgetRow) throw new Error("No se pudo crear el presupuesto");
 
-  if (data.selected_optionals?.length) {
-    for (const opt of data.selected_optionals) {
-      await query(
-        "INSERT INTO public.budget_selected_optionals (budget_id, optional_id, name, price) VALUES ($1,$2,$3,$4)",
-        [budget.id, opt.optional_id, opt.name, opt.price]
+    if (data.selected_optionals?.length) {
+      const opts = data.selected_optionals;
+      await tx.query(
+        `INSERT INTO public.budget_selected_optionals (budget_id, optional_id, name, price)
+         SELECT $1, x.optional_id, x.name, x.price
+         FROM unnest($2::uuid[], $3::text[], $4::float8[]) AS x(optional_id, name, price)`,
+        [budgetRow.id, opts.map((o) => o.optional_id), opts.map((o) => o.name), opts.map((o) => o.price)]
       );
     }
-  }
+
+    return budgetRow;
+  });
 
   revalidatePath("/");
   return budget;
@@ -146,31 +152,30 @@ export async function updateCommercialStatus(
   if (!current) throw new Error("Presupuesto no encontrado");
 
   const now = new Date().toISOString();
-  await query(
-    `UPDATE public.budgets SET
-       commercial_status = $1,
-       accepted_at = $2,
-       rejected_at = $3,
-       payment_status = $4,
-       updated_at = now()
-     WHERE id = $5`,
-    [
-      newStatus,
-      newStatus === "accepted" ? now : null,
-      newStatus === "rejected" ? now : null,
-      newStatus === "rejected"
-        ? "paid"
-        : newStatus === "pending"
-          ? "pending"
-          : current.payment_status || "pending",
-      budgetId,
-    ]
-  );
+  const paymentStatus =
+    newStatus === "rejected"
+      ? "paid"
+      : newStatus === "pending"
+        ? "pending"
+        : current.payment_status || "pending";
 
-  await query(
-    "INSERT INTO public.budget_status_history (budget_id, user_id, previous_status, new_status) VALUES ($1,$2,$3,$4)",
-    [budgetId, userId, current.commercial_status, newStatus]
-  );
+  await withTransaction(async (tx) => {
+    await tx.query(
+      `UPDATE public.budgets SET
+         commercial_status = $1,
+         accepted_at = $2,
+         rejected_at = $3,
+         payment_status = $4,
+         updated_at = now()
+       WHERE id = $5`,
+      [newStatus, newStatus === "accepted" ? now : null, newStatus === "rejected" ? now : null, paymentStatus, budgetId]
+    );
+
+    await tx.query(
+      "INSERT INTO public.budget_status_history (budget_id, user_id, previous_status, new_status) VALUES ($1,$2,$3,$4)",
+      [budgetId, userId, current.commercial_status, newStatus]
+    );
+  });
 
   revalidatePath("/");
 }
@@ -184,28 +189,30 @@ export async function registerPayment(data: {
 }) {
   await requireUser();
 
-  await query(
-    "INSERT INTO public.payments (budget_id, amount, payment_date, payment_method, notes) VALUES ($1,$2,$3,$4,$5)",
-    [data.budget_id, data.amount, data.payment_date, data.payment_method || null, data.notes || null]
-  );
+  await withTransaction(async (tx) => {
+    await tx.query(
+      "INSERT INTO public.payments (budget_id, amount, payment_date, payment_method, notes) VALUES ($1,$2,$3,$4,$5)",
+      [data.budget_id, data.amount, data.payment_date, data.payment_method || null, data.notes || null]
+    );
 
-  const paidRow = await queryOne<{ total: string }>(
-    "SELECT COALESCE(SUM(amount),0) AS total FROM public.payments WHERE budget_id = $1",
-    [data.budget_id]
-  );
-  const budgetRow = await queryOne<{ total: string }>(
-    "SELECT total FROM public.budgets WHERE id = $1",
-    [data.budget_id]
-  );
+    const paidRow = await tx.query<{ total: string }>(
+      "SELECT COALESCE(SUM(amount),0) AS total FROM public.payments WHERE budget_id = $1",
+      [data.budget_id]
+    );
+    const budgetRow = await tx.query<{ total: string }>(
+      "SELECT total FROM public.budgets WHERE id = $1",
+      [data.budget_id]
+    );
 
-  const totalPaid = Number(paidRow?.total || 0);
-  const budgetTotal = Number(budgetRow?.total || 0);
-  const status = totalPaid >= budgetTotal ? "paid" : totalPaid > 0 ? "partial" : "pending";
+    const totalPaid = Number(paidRow.rows[0]?.total || 0);
+    const budgetTotal = Number(budgetRow.rows[0]?.total || 0);
+    const status = totalPaid >= budgetTotal ? "paid" : totalPaid > 0 ? "partial" : "pending";
 
-  await query(
-    "UPDATE public.budgets SET payment_status = $1, updated_at = now() WHERE id = $2",
-    [status, data.budget_id]
-  );
+    await tx.query(
+      "UPDATE public.budgets SET payment_status = $1, updated_at = now() WHERE id = $2",
+      [status, data.budget_id]
+    );
+  });
 
   revalidatePath("/");
 }
@@ -260,48 +267,52 @@ export async function createCustomBrandAndModel(data: {
     (data.modelName || "personalizado").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") +
     "-" + Date.now().toString(36).slice(-4);
 
-  const brand = await queryOne<{ id: string }>(
-    "SELECT id FROM public.boiler_brands WHERE slug = $1",
-    [brandSlug]
-  );
-  let brandId = brand?.id;
-  if (!brandId) {
-    const nb = await queryOne<{ id: string }>(
-      "INSERT INTO public.boiler_brands (name, slug, is_custom) VALUES ($1,$2,true) RETURNING id",
-      [data.brandName.trim(), brandSlug]
+  const result = await withTransaction(async (tx) => {
+    const existing = await tx.query<{ id: string }>(
+      "SELECT id FROM public.boiler_brands WHERE slug = $1",
+      [brandSlug]
     );
-    brandId = nb!.id;
-  }
+    let brandId = existing.rows[0]?.id;
+    if (!brandId) {
+      const nb = await tx.query<{ id: string }>(
+        "INSERT INTO public.boiler_brands (name, slug, is_custom) VALUES ($1,$2,true) RETURNING id",
+        [data.brandName.trim(), brandSlug]
+      );
+      brandId = nb.rows[0].id;
+    }
 
-  const nm = await queryOne<{ id: string }>(
-    `INSERT INTO public.boiler_models (brand_id, name, slug, description, price_base, price_final, price_rounded)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-    [
-      brandId,
-      data.modelName.trim() || "Personalizado",
-      modelSlug,
-      data.description || data.modelName.trim() || "Presupuesto personalizado",
-      0, data.subtotal, data.subtotal,
-    ]
-  );
-  const modelId = nm!.id;
-
-  const inclLines = data.includes.map((s) => s.trim()).filter(Boolean);
-  const exclLines = data.excludes.map((s) => s.trim()).filter(Boolean);
-  if (inclLines.length) {
-    await query(
-      `INSERT INTO public.model_includes (model_id, description, sort_order)
-       SELECT $1, d, o FROM unnest($2::text[]) AS d, unnest($3::int[]) AS o`,
-      [modelId, inclLines, inclLines.map((_, i) => i + 1)]
+    const nm = await tx.query<{ id: string }>(
+      `INSERT INTO public.boiler_models (brand_id, name, slug, description, price_base, price_final, price_rounded)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [
+        brandId,
+        data.modelName.trim() || "Personalizado",
+        modelSlug,
+        data.description || data.modelName.trim() || "Presupuesto personalizado",
+        0, data.subtotal, data.subtotal,
+      ]
     );
-  }
-  if (exclLines.length) {
-    await query(
-      `INSERT INTO public.model_excludes (model_id, description, sort_order)
-       SELECT $1, d, o FROM unnest($2::text[]) AS d, unnest($3::int[]) AS o`,
-      [modelId, exclLines, exclLines.map((_, i) => i + 1)]
-    );
-  }
+    const modelId = nm.rows[0].id;
 
-  return { brandId, modelId };
+    const inclLines = data.includes.map((s) => s.trim()).filter(Boolean);
+    const exclLines = data.excludes.map((s) => s.trim()).filter(Boolean);
+    if (inclLines.length) {
+      await tx.query(
+        `INSERT INTO public.model_includes (model_id, description, sort_order)
+         SELECT $1, d, o FROM unnest($2::text[]) AS d, unnest($3::int[]) AS o`,
+        [modelId, inclLines, inclLines.map((_, i) => i + 1)]
+      );
+    }
+    if (exclLines.length) {
+      await tx.query(
+        `INSERT INTO public.model_excludes (model_id, description, sort_order)
+         SELECT $1, d, o FROM unnest($2::text[]) AS d, unnest($3::int[]) AS o`,
+        [modelId, exclLines, exclLines.map((_, i) => i + 1)]
+      );
+    }
+
+    return { brandId, modelId };
+  });
+
+  return result;
 }
