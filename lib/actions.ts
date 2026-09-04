@@ -145,19 +145,29 @@ export async function updateCommercialStatus(
 ) {
   const userId = await requireUser();
 
-  const current = await queryOne<{ commercial_status: string; payment_status: string }>(
-    "SELECT commercial_status, payment_status FROM public.budgets WHERE id = $1 AND user_id = $2",
+  const current = await queryOne<{ commercial_status: string; payment_status: string; total: string }>(
+    "SELECT commercial_status, payment_status, total FROM public.budgets WHERE id = $1 AND user_id = $2",
     [budgetId, userId]
   );
   if (!current) throw new Error("Presupuesto no encontrado");
 
-  const now = new Date().toISOString();
+  const paidRow = await queryOne<{ total: string }>(
+    "SELECT COALESCE(SUM(amount),0) AS total FROM public.payments WHERE budget_id = $1",
+    [budgetId]
+  );
+  const paidCents = Math.round(Number(paidRow?.total || 0) * 100);
+  const totalCents = Math.round(Number(current.total) * 100);
+
   const paymentStatus =
     newStatus === "rejected"
       ? "paid"
-      : newStatus === "pending"
-        ? "pending"
-        : current.payment_status || "pending";
+      : paidCents > 0 && totalCents > 0 && paidCents >= totalCents
+        ? "paid"
+        : paidCents > 0
+          ? "partial"
+          : "pending";
+
+  const now = new Date().toISOString();
 
   await withTransaction(async (tx) => {
     await tx.query(
