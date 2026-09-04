@@ -17,6 +17,7 @@ services:
     environment:
       - DATABASE_URL=postgres://calrenove:${POSTGRES_PASSWORD}@calrenove-db:5432/calrenove
       - SESSION_SECRET=${SESSION_SECRET}
+      - DATA_DIR=/data
       - NODE_ENV=production
     depends_on:
       calrenove-db:
