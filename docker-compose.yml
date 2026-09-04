@@ -10,17 +10,34 @@ services:
   calrenove-crm:
     build:
       context: .
-      args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     container_name: calrenove-crm
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8100}:3000"
     environment:
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=postgres://calrenove:${POSTGRES_PASSWORD}@calrenove-db:5432/calrenove
+      - SESSION_SECRET=${SESSION_SECRET}
       - NODE_ENV=production
-    # Resolver los subdominios al propio NAS (evita NAT loopback)
+    depends_on:
+      calrenove-db:
+        condition: service_healthy
+    volumes:
+      - ./data:/data
     extra_hosts:
-      - "supabase.nascalrenove.synology.me:192.168.1.195"
       - "crm.nascalrenove.synology.me:192.168.1.195"
+
+  calrenove-db:
+    image: postgres:16-alpine
+    container_name: calrenove-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: calrenove
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: calrenove
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calrenove -d calrenove"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

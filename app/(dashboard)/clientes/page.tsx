@@ -1,35 +1,28 @@
-import { createClient } from "@/lib/supabase";
+import { getSessionUser } from "@/lib/auth";
+import { query } from "@/lib/db";
+import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-async function getCustomers(userId: string) {
-  const supabase = await createClient();
-  const { data: customers } = await supabase
-    .from("customers")
-    .select("*, budgets:budgets(*)")
-    .eq("user_id", userId)
-    .order("name");
-
-  return (customers || []).map((c) => ({
-    ...c,
-    totalBudgeted: (c.budgets || []).reduce((s: number, b: any) => s + Number(b.total), 0),
-    totalAccepted: (c.budgets || []).filter((b: any) => b.commercial_status === "accepted").reduce((s: number, b: any) => s + Number(b.total), 0),
-    totalPaid: (c.budgets || []).filter((b: any) => b.commercial_status === "accepted").reduce((s: number, b: any) => {
-      return s; // We'll get payments in a more detailed query
-    }, 0),
-    budgetCount: (c.budgets || []).length,
-  }));
-}
-
 export default async function ClientesPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
-  const customers = await getCustomers(user.id);
+  const customers = await query<any>(
+    `SELECT c.id, c.name, c.phone, c.email, c.dni,
+       count(b.id) AS budget_count,
+       COALESCE(SUM(b.total), 0) AS total_budgeted,
+       COALESCE(SUM(b.total) FILTER (WHERE b.commercial_status = 'accepted'), 0) AS total_accepted
+     FROM public.customers c
+     LEFT JOIN public.budgets b ON b.customer_id = c.id
+     WHERE c.user_id = $1
+     GROUP BY c.id, c.name, c.phone, c.email, c.dni
+     ORDER BY c.name`,
+    [user.id]
+  );
 
   return (
     <div className="space-y-6">
@@ -61,9 +54,9 @@ export default async function ClientesPage() {
                       <td className="p-3 hidden lg:table-cell text-muted-foreground text-xs" data-label="DNI">{c.dni || "—"}</td>
                       <td className="p-3 hidden sm:table-cell text-muted-foreground text-xs" data-label="Teléfono">{c.phone || "—"}</td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground text-xs" data-label="Email">{c.email || "—"}</td>
-                      <td className="p-3 text-right" data-label="Presupuestos">{c.budgetCount}</td>
-                      <td className="p-3 text-right" data-label="Total presupuestado">{formatCurrency(c.totalBudgeted)}</td>
-                      <td className="p-3 text-right text-emerald-600" data-label="Aceptado">{formatCurrency(c.totalAccepted)}</td>
+                      <td className="p-3 text-right" data-label="Presupuestos">{Number(c.budget_count)}</td>
+                      <td className="p-3 text-right" data-label="Total presupuestado">{formatCurrency(c.total_budgeted)}</td>
+                      <td className="p-3 text-right text-emerald-600" data-label="Aceptado">{formatCurrency(c.total_accepted)}</td>
                       <td className="p-3 text-center" data-label="">
                         <Link href={`/presupuestos?cliente=${encodeURIComponent(c.name)}`} className="text-xs text-primary underline">Ver presupuestos</Link>
                       </td>

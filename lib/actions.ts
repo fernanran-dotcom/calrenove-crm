@@ -1,93 +1,82 @@
 "use server";
 
-import { createClient } from "@/lib/supabase";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import { query, queryOne } from "@/lib/db";
+import { createSessionToken, COOKIE_NAME, getSessionUser } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+
+// ============ AUTH ============
 
 export async function login(formData: FormData) {
-  const supabase = await createClient();
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string || "").trim().toLowerCase();
   const password = formData.get("password") as string;
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: error.message };
+  const user = await queryOne<{ id: string; password_hash: string }>(
+    "SELECT id, password_hash FROM public.users WHERE email = $1",
+    [email]
+  );
+  if (!user) return { error: "Usuario o contraseña incorrectos" };
+
+  const valid = await bcrypt.compare(password, user.password_hash);
+  if (!valid) return { error: "Usuario o contraseña incorrectos" };
+
+  const { token, maxAge } = createSessionToken(user.id);
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: true,
+    path: "/",
+    maxAge,
+  });
+  return { success: true };
+}
+
+export async function register(formData: FormData) {
+  const email = (formData.get("email") as string || "").trim().toLowerCase();
+  const password = formData.get("password") as string;
+
+  if (password.length < 3) return { error: "La contraseña debe tener al menos 3 caracteres" };
+
+  const existing = await queryOne("SELECT id FROM public.users WHERE email = $1", [email]);
+  if (existing) return { error: "Ya existe una cuenta con ese usuario" };
+
+  const hash = await bcrypt.hash(password, 10);
+  await query("INSERT INTO public.users (email, password_hash) VALUES ($1, $2)", [email, hash]);
   return { success: true };
 }
 
 export async function logout() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, "", { httpOnly: true, path: "/", maxAge: 0 });
   revalidatePath("/");
 }
 
-export async function register(formData: FormData) {
-  const supabase = await createClient();
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+// ============ PRESUPUESTOS ============
 
-  const { error, data } = await supabase.auth.signUp({ email, password });
-  if (error) return { error: error.message };
-
-  if (data.user) {
-    try {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      await fetch(`${url}/auth/v1/admin/users/${data.user.id}`, {
-        method: "PUT",
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email_confirm: true }),
-      });
-    } catch {}
-  }
-
-  return { success: true, user: data.user };
+async function requireUser(): Promise<string> {
+  const user = await getSessionUser();
+  if (!user) throw new Error("No autenticado");
+  return user.id;
 }
 
-export async function requestPasswordReset(formData: FormData) {
-  const supabase = await createClient();
-  const email = formData.get("email") as string;
-
-  let origin = "https://calrenove-main.vercel.app";
-  try {
-    const hdrs = await headers();
-    const host = hdrs.get("x-forwarded-host") || hdrs.get("host");
-    if (host) {
-      const proto = hdrs.get("x-forwarded-proto") || "https";
-      origin = `${proto}://${host}`;
-    }
-  } catch {}
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=/reset-password`,
-  });
-
-  if (error) return { error: error.message };
-  return { success: true };
-}
-
-export async function updatePassword(formData: FormData) {
-  const supabase = await createClient();
-  const password = formData.get("password") as string;
-  const confirm = formData.get("confirm") as string;
-
-  if (password !== confirm) return { error: "Las contraseñas no coinciden" };
-  if (password.length < 6) return { error: "La contraseña debe tener al menos 6 caracteres" };
-
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) return { error: error.message };
-
-  return { success: true };
-}
-
-export async function getNextBudgetNumber() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_next_budget_number");
-  if (error) throw new Error(error.message);
-  return data as string;
+export async function createCustomer(data: {
+  name: string;
+  phone: string | null;
+  address: string | null;
+  email: string | null;
+  dni: string | null;
+}) {
+  const userId = await requireUser();
+  const customer = await queryOne<{ id: string }>(
+    `INSERT INTO public.customers (user_id, name, phone, address, email, dni)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [userId, data.name, data.phone, data.address, data.email, data.dni]
+  );
+  if (!customer) throw new Error("No se pudo crear el cliente");
+  return customer;
 }
 
 export async function createBudget(data: {
@@ -109,50 +98,35 @@ export async function createBudget(data: {
   valid_until: string;
   selected_optionals?: Array<{ optional_id: string; name: string; price: number }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const userId = await requireUser();
 
-  const budgetNumber = await getNextBudgetNumber();
+  const numRow = await queryOne<{ next: string }>("SELECT public.get_next_budget_number() AS next");
+  const budgetNumber = numRow!.next;
 
-  const insertData: Record<string, any> = {
-    budget_number: budgetNumber,
-    company_id: data.company_id,
-    customer_id: data.customer_id,
-    brand_id: data.brand_id,
-    model_id: data.model_id,
-    user_id: user.id,
-    subtotal: data.subtotal,
-    iva_rate: data.iva_rate,
-    iva_amount: data.iva_amount,
-    total: data.total,
-    custom_price: data.custom_price || null,
-    notes: data.notes || null,
-    brand_name: data.brand_name || null,
-    model_name: data.model_name || null,
-    description: data.description || null,
-    items: data.items || [],
-    issue_date: data.issue_date,
-    valid_until: data.valid_until,
-  };
-
-  const { data: budget, error } = await supabase
-    .from("budgets")
-    .insert(insertData)
-    .select()
-    .single();
-
-  if (error) throw new Error("Error al insertar presupuesto: " + error.message);
-  if (!budget) throw new Error("No se pudo crear el presupuesto (sin respuesta)");
+  const budget = await queryOne<{ id: string }>(
+    `INSERT INTO public.budgets
+      (budget_number, company_id, customer_id, brand_id, model_id, user_id,
+       subtotal, iva_rate, iva_amount, total, custom_price, notes,
+       brand_name, model_name, description, items, issue_date, valid_until)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     RETURNING id`,
+    [
+      budgetNumber, data.company_id, data.customer_id, data.brand_id, data.model_id, userId,
+      data.subtotal, data.iva_rate, data.iva_amount, data.total,
+      data.custom_price || null, data.notes || null,
+      data.brand_name || null, data.model_name || null, data.description || null,
+      JSON.stringify(data.items || []), data.issue_date, data.valid_until,
+    ]
+  );
+  if (!budget) throw new Error("No se pudo crear el presupuesto");
 
   if (data.selected_optionals?.length) {
-    const { error: optError } = await supabase.from("budget_selected_optionals").insert(
-      data.selected_optionals.map((opt) => ({
-        budget_id: budget.id,
-        ...opt,
-      }))
-    );
-    if (optError) throw new Error("Error al guardar opcionales: " + optError.message);
+    for (const opt of data.selected_optionals) {
+      await query(
+        "INSERT INTO public.budget_selected_optionals (budget_id, optional_id, name, price) VALUES ($1,$2,$3,$4)",
+        [budget.id, opt.optional_id, opt.name, opt.price]
+      );
+    }
   }
 
   revalidatePath("/");
@@ -163,37 +137,36 @@ export async function updateCommercialStatus(
   budgetId: string,
   newStatus: "pending" | "accepted" | "rejected"
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const userId = await requireUser();
 
-  const { data: current } = await supabase
-    .from("budgets")
-    .select("commercial_status")
-    .eq("id", budgetId)
-    .single();
+  const current = await queryOne<{ commercial_status: string }>(
+    "SELECT commercial_status FROM public.budgets WHERE id = $1 AND user_id = $2",
+    [budgetId, userId]
+  );
+  if (!current) throw new Error("Presupuesto no encontrado");
 
   const now = new Date().toISOString();
-  const updateData: Record<string, any> = {
-    commercial_status: newStatus,
-    accepted_at: newStatus === "accepted" ? now : null,
-    rejected_at: newStatus === "rejected" ? now : null,
-    payment_status: newStatus === "rejected" ? "paid" : newStatus === "pending" ? "pending" : undefined,
-  };
+  await query(
+    `UPDATE public.budgets SET
+       commercial_status = $1,
+       accepted_at = $2,
+       rejected_at = $3,
+       payment_status = $4,
+       updated_at = now()
+     WHERE id = $5`,
+    [
+      newStatus,
+      newStatus === "accepted" ? now : null,
+      newStatus === "rejected" ? now : null,
+      newStatus === "rejected" ? "paid" : newStatus === "pending" ? "pending" : null,
+      budgetId,
+    ]
+  );
 
-  const { error } = await supabase
-    .from("budgets")
-    .update(updateData)
-    .eq("id", budgetId);
-
-  if (error) throw new Error(error.message);
-
-  await supabase.from("budget_status_history").insert({
-    budget_id: budgetId,
-    user_id: user.id,
-    previous_status: current?.commercial_status || null,
-    new_status: newStatus,
-  });
+  await query(
+    "INSERT INTO public.budget_status_history (budget_id, user_id, previous_status, new_status) VALUES ($1,$2,$3,$4)",
+    [budgetId, userId, current.commercial_status, newStatus]
+  );
 
   revalidatePath("/");
 }
@@ -205,65 +178,126 @@ export async function registerPayment(data: {
   payment_method?: string;
   notes?: string;
 }) {
-  const supabase = await createClient();
+  await requireUser();
 
-  const { error } = await supabase.from("payments").insert({
-    budget_id: data.budget_id,
-    amount: data.amount,
-    payment_date: data.payment_date,
-    payment_method: data.payment_method || null,
-    notes: data.notes || null,
-  });
+  await query(
+    "INSERT INTO public.payments (budget_id, amount, payment_date, payment_method, notes) VALUES ($1,$2,$3,$4,$5)",
+    [data.budget_id, data.amount, data.payment_date, data.payment_method || null, data.notes || null]
+  );
 
-  if (error) throw new Error(error.message);
+  const paidRow = await queryOne<{ total: string }>(
+    "SELECT COALESCE(SUM(amount),0) AS total FROM public.payments WHERE budget_id = $1",
+    [data.budget_id]
+  );
+  const budgetRow = await queryOne<{ total: string }>(
+    "SELECT total FROM public.budgets WHERE id = $1",
+    [data.budget_id]
+  );
 
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("amount")
-    .eq("budget_id", data.budget_id);
+  const totalPaid = Number(paidRow?.total || 0);
+  const budgetTotal = Number(budgetRow?.total || 0);
+  const status = totalPaid >= budgetTotal ? "paid" : totalPaid > 0 ? "partial" : "pending";
 
-  const totalPaid = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-
-  const { data: budget } = await supabase
-    .from("budgets")
-    .select("total")
-    .eq("id", data.budget_id)
-    .single();
-
-  let paymentStatus: string;
-  if (totalPaid >= Number(budget?.total || 0)) {
-    paymentStatus = "paid";
-  } else if (totalPaid > 0) {
-    paymentStatus = "partial";
-  } else {
-    paymentStatus = "pending";
-  }
-
-  await supabase
-    .from("budgets")
-    .update({ payment_status: paymentStatus })
-    .eq("id", data.budget_id);
+  await query(
+    "UPDATE public.budgets SET payment_status = $1, updated_at = now() WHERE id = $2",
+    [status, data.budget_id]
+  );
 
   revalidatePath("/");
 }
 
-export async function upsertReminderSettings(data: {
-  enabled: boolean;
-  frequency_days: number;
-}) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+export async function upsertReminderSettings(data: { enabled: boolean; frequency_days: number }) {
+  const userId = await requireUser();
 
-  const { error } = await supabase.from("email_reminder_settings").upsert(
-    {
-      user_id: user.id,
-      enabled: data.enabled,
-      frequency_days: data.frequency_days,
-    },
-    { onConflict: "user_id" }
-  );
-
-  if (error) throw new Error(error.message);
+  const existing = await queryOne("SELECT id FROM public.email_reminder_settings WHERE user_id = $1", [userId]);
+  if (existing) {
+    await query(
+      "UPDATE public.email_reminder_settings SET enabled = $1, frequency_days = $2, updated_at = now() WHERE user_id = $3",
+      [data.enabled, data.frequency_days, userId]
+    );
+  } else {
+    await query(
+      "INSERT INTO public.email_reminder_settings (user_id, enabled, frequency_days) VALUES ($1,$2,$3)",
+      [userId, data.enabled, data.frequency_days]
+    );
+  }
   revalidatePath("/");
+}
+
+export async function updatePassword(formData: FormData) {
+  const user = await getSessionUser();
+  if (!user) return { error: "No autenticado" };
+
+  const password = formData.get("password") as string;
+  const confirm = formData.get("confirm") as string;
+
+  if (password !== confirm) return { error: "Las contraseñas no coinciden" };
+  if (password.length < 3) return { error: "La contraseña debe tener al menos 3 caracteres" };
+
+  const hash = await bcrypt.hash(password, 10);
+  await query("UPDATE public.users SET password_hash = $1 WHERE id = $2", [hash, user.id]);
+  return { success: true };
+}
+
+// ============ CATÁLOGO (Otra marca) ============
+
+export async function createCustomBrandAndModel(data: {
+  brandName: string;
+  modelName: string;
+  description: string;
+  includes: string[];
+  excludes: string[];
+  subtotal: number;
+}) {
+  const brandSlug =
+    data.brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") +
+    "-" + Date.now().toString(36).slice(-4);
+  const modelSlug =
+    (data.modelName || "personalizado").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") +
+    "-" + Date.now().toString(36).slice(-4);
+
+  const brand = await queryOne<{ id: string }>(
+    "SELECT id FROM public.boiler_brands WHERE slug = $1",
+    [brandSlug]
+  );
+  let brandId = brand?.id;
+  if (!brandId) {
+    const nb = await queryOne<{ id: string }>(
+      "INSERT INTO public.boiler_brands (name, slug, is_custom) VALUES ($1,$2,true) RETURNING id",
+      [data.brandName.trim(), brandSlug]
+    );
+    brandId = nb!.id;
+  }
+
+  const nm = await queryOne<{ id: string }>(
+    `INSERT INTO public.boiler_models (brand_id, name, slug, description, price_base, price_final, price_rounded)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [
+      brandId,
+      data.modelName.trim() || "Personalizado",
+      modelSlug,
+      data.description || data.modelName.trim() || "Presupuesto personalizado",
+      0, data.subtotal, data.subtotal,
+    ]
+  );
+  const modelId = nm!.id;
+
+  const inclLines = data.includes.map((s) => s.trim()).filter(Boolean);
+  const exclLines = data.excludes.map((s) => s.trim()).filter(Boolean);
+  if (inclLines.length) {
+    await query(
+      `INSERT INTO public.model_includes (model_id, description, sort_order)
+       SELECT $1, d, o FROM unnest($2::text[]) AS d, unnest($3::int[]) AS o`,
+      [modelId, inclLines, inclLines.map((_, i) => i + 1)]
+    );
+  }
+  if (exclLines.length) {
+    await query(
+      `INSERT INTO public.model_excludes (model_id, description, sort_order)
+       SELECT $1, d, o FROM unnest($2::text[]) AS d, unnest($3::int[]) AS o`,
+      [modelId, exclLines, exclLines.map((_, i) => i + 1)]
+    );
+  }
+
+  return { brandId, modelId };
 }

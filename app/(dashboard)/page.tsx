@@ -1,37 +1,57 @@
-import { createClient } from "@/lib/supabase";
+import { getSessionUser } from "@/lib/auth";
+import { queryOne } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilePlus, History, Handshake, DollarSign, Users, Settings } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
-async function getMetrics(userId: string) {
-  const supabase = await createClient();
+interface Metrics {
+  total: number;
+  pending: number;
+  accepted: number;
+  rejected: number;
+  rate: number;
+  totalAccepted: number;
+  totalPendingPayment: number;
+  partialCount: number;
+  noPaymentCount: number;
+}
 
-  const { data: budgets } = await supabase
-    .from("budgets")
-    .select("commercial_status, payment_status, total")
-    .eq("user_id", userId);
-
-  const total = budgets?.length || 0;
-  const pending = budgets?.filter((b) => b.commercial_status === "pending").length || 0;
-  const accepted = budgets?.filter((b) => b.commercial_status === "accepted").length || 0;
-  const rejected = budgets?.filter((b) => b.commercial_status === "rejected").length || 0;
+async function getMetrics(userId: string): Promise<Metrics> {
+  const row = await queryOne<any>(
+    `SELECT
+      count(*) AS total,
+      count(*) FILTER (WHERE commercial_status = 'pending') AS pending,
+      count(*) FILTER (WHERE commercial_status = 'accepted') AS accepted,
+      count(*) FILTER (WHERE commercial_status = 'rejected') AS rejected,
+      COALESCE(SUM(total) FILTER (WHERE commercial_status = 'accepted'), 0) AS total_accepted,
+      COALESCE(SUM(total) FILTER (WHERE commercial_status = 'accepted' AND payment_status IN ('pending','partial')), 0) AS total_pending_payment,
+      count(*) FILTER (WHERE payment_status = 'partial') AS partial_count,
+      count(*) FILTER (WHERE commercial_status = 'accepted' AND payment_status = 'pending') AS no_payment_count
+    FROM public.budgets WHERE user_id = $1`,
+    [userId]
+  );
+  if (!row) return { total: 0, pending: 0, accepted: 0, rejected: 0, rate: 0, totalAccepted: 0, totalPendingPayment: 0, partialCount: 0, noPaymentCount: 0 };
+  const accepted = Number(row.accepted);
+  const rejected = Number(row.rejected);
   const decisions = accepted + rejected;
-  const rate = decisions > 0 ? Math.round((accepted / decisions) * 100) : 0;
-  const totalAccepted = budgets?.filter((b) => b.commercial_status === "accepted")
-    .reduce((s, b) => s + Number(b.total), 0) || 0;
-  const totalPendingPayment = budgets?.filter((b) => b.commercial_status === "accepted" && (b.payment_status === "pending" || b.payment_status === "partial"))
-    .reduce((s, b) => s + Number(b.total), 0) || 0;
-  const partialCount = budgets?.filter((b) => b.payment_status === "partial").length || 0;
-  const noPaymentCount = budgets?.filter((b) => b.commercial_status === "accepted" && b.payment_status === "pending").length || 0;
-
-  return { total, pending, accepted, rejected, rate, totalAccepted, totalPendingPayment, partialCount, noPaymentCount };
+  return {
+    total: Number(row.total),
+    pending: Number(row.pending),
+    accepted,
+    rejected,
+    rate: decisions > 0 ? Math.round((accepted / decisions) * 100) : 0,
+    totalAccepted: Number(row.total_accepted),
+    totalPendingPayment: Number(row.total_pending_payment),
+    partialCount: Number(row.partial_count),
+    noPaymentCount: Number(row.no_payment_count),
+  };
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
   const m = await getMetrics(user.id);
 

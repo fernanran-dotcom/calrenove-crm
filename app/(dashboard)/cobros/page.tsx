@@ -1,38 +1,35 @@
-import { createClient } from "@/lib/supabase";
+import { getSessionUser } from "@/lib/auth";
+import { query } from "@/lib/db";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaymentStatusBadge } from "@/components/presupuestos/status-badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-async function getPaymentsData(userId: string) {
-  const supabase = await createClient();
-  const { data: budgets } = await supabase
-    .from("budgets")
-    .select("*, customer:customers(*), company:companies(*), payments:payments(*)")
-    .eq("user_id", userId)
-    .eq("commercial_status", "accepted")
-    .order("created_at", { ascending: false });
-
-  const totalAccepted = budgets?.reduce((s, b) => s + Number(b.total), 0) || 0;
-  const totalPaid = budgets?.reduce((s: number, b: any) => {
-    const paid = (b.payments || []).reduce((ps: number, p: any) => ps + Number(p.amount), 0);
-    return s + paid;
-  }, 0) || 0;
-  const totalPending = totalAccepted - totalPaid;
-  const partialCount = budgets?.filter((b) => b.payment_status === "partial").length || 0;
-  const pendingCount = budgets?.filter((b) => b.payment_status === "pending").length || 0;
-
-  return { budgets: budgets || [], totalAccepted, totalPaid, totalPending, partialCount, pendingCount };
-}
-
 export default async function CobrosPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
-  const { budgets, totalAccepted, totalPaid, totalPending, partialCount, pendingCount } = await getPaymentsData(user.id);
+  const budgets = await query<any>(
+    `SELECT b.*, c.name AS customer_name, co.name AS company_name,
+       COALESCE((SELECT json_agg(json_build_object('amount', p.amount)) FROM public.payments p WHERE p.budget_id = b.id), '[]'::json) AS payments
+     FROM public.budgets b
+     LEFT JOIN public.customers c ON c.id = b.customer_id
+     LEFT JOIN public.companies co ON co.id = b.company_id
+     WHERE b.user_id = $1 AND b.commercial_status = 'accepted'
+     ORDER BY b.created_at DESC`,
+    [user.id]
+  );
+
+  const totalAccepted = budgets.reduce((s: number, b: any) => s + Number(b.total), 0);
+  const totalPaid = budgets.reduce((s: number, b: any) => {
+    return s + (b.payments || []).reduce((ps: number, p: any) => ps + Number(p.amount), 0);
+  }, 0);
+  const totalPending = totalAccepted - totalPaid;
+  const partialCount = budgets.filter((b: any) => b.payment_status === "partial").length;
+  const pendingCount = budgets.filter((b: any) => b.payment_status === "pending").length;
 
   return (
     <div className="space-y-6">
@@ -83,15 +80,15 @@ export default async function CobrosPage() {
                 <tbody>
                   {budgets.map((b: any) => {
                     const paid = (b.payments || []).reduce((s: number, p: any) => s + Number(p.amount), 0);
-                    const pending = Number(b.total) - paid;
+                    const pend = Number(b.total) - paid;
                     return (
                       <tr key={b.id} className="border-b hover:bg-muted/30">
                         <td className="p-3 font-mono text-xs" data-label="Nº">{b.budget_number}</td>
-                        <td className="p-3" data-label="Cliente">{b.customer?.name || "—"}</td>
-                        <td className="p-3 hidden md:table-cell text-xs text-muted-foreground" data-label="Empresa">{b.company?.name}</td>
+                        <td className="p-3" data-label="Cliente">{b.customer_name || "—"}</td>
+                        <td className="p-3 hidden md:table-cell text-xs text-muted-foreground" data-label="Empresa">{b.company_name}</td>
                         <td className="p-3 text-right" data-label="Total">{formatCurrency(b.total)}</td>
                         <td className="p-3 text-right text-emerald-600" data-label="Cobrado">{formatCurrency(paid)}</td>
-                        <td className="p-3 text-right text-amber-600" data-label="Pendiente">{formatCurrency(pending)}</td>
+                        <td className="p-3 text-right text-amber-600" data-label="Pendiente">{formatCurrency(pend)}</td>
                         <td className="p-3 text-center" data-label="Estado"><PaymentStatusBadge status={b.payment_status} /></td>
                         <td className="p-3 text-center" data-label="">
                           <Link href={`/presupuestos/${b.id}`} className="text-primary underline text-xs">Gestionar</Link>

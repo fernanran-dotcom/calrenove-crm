@@ -8,17 +8,17 @@ export function middleware(request: NextRequest) {
     pathname === "/auth/callback" ||
     pathname === "/reset-password";
 
-  const hasAuthCookies = request.cookies
-    .getAll()
-    .some((cookie) => cookie.name.includes("auth-token"));
+  const hasSessionCookie = request.cookies.getAll().some(
+    (cookie) => cookie.name === "crm_session"
+  );
 
-  if (!hasAuthCookies && !isPublicRoute) {
+  if (!hasSessionCookie && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (hasAuthCookies && pathname.startsWith("/login")) {
+  if (hasSessionCookie && pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

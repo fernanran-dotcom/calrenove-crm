@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase";
+import { getSessionUser } from "@/lib/auth";
+import { query } from "@/lib/db";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CommercialStatusBadge } from "@/components/presupuestos/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -7,30 +9,26 @@ import { UpdateStatusForm } from "./update-status-form";
 
 export const dynamic = "force-dynamic";
 
-async function getCRMData(userId: string) {
-  const supabase = await createClient();
-  const { data: budgets } = await supabase
-    .from("budgets")
-    .select("*, customer:customers(*), company:companies(*)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+export default async function CRMPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
-  const total = budgets?.length || 0;
-  const accepted = budgets?.filter((b) => b.commercial_status === "accepted").length || 0;
-  const rejected = budgets?.filter((b) => b.commercial_status === "rejected").length || 0;
-  const pending = budgets?.filter((b) => b.commercial_status === "pending").length || 0;
+  const budgets = await query<any>(
+    `SELECT b.*, c.name AS customer_name, co.name AS company_name
+     FROM public.budgets b
+     LEFT JOIN public.customers c ON c.id = b.customer_id
+     LEFT JOIN public.companies co ON co.id = b.company_id
+     WHERE b.user_id = $1
+     ORDER BY b.created_at DESC`,
+    [user.id]
+  );
+
+  const total = budgets.length;
+  const accepted = budgets.filter((b) => b.commercial_status === "accepted").length;
+  const rejected = budgets.filter((b) => b.commercial_status === "rejected").length;
+  const pending = budgets.filter((b) => b.commercial_status === "pending").length;
   const decisions = accepted + rejected;
   const rate = decisions > 0 ? Math.round((accepted / decisions) * 100) : 0;
-
-  return { budgets: budgets || [], total, accepted, rejected, pending, rate };
-}
-
-export default async function CRMPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { budgets, total, accepted, rejected, pending, rate } = await getCRMData(user.id);
 
   return (
     <div className="space-y-6">
@@ -71,8 +69,8 @@ export default async function CRMPage() {
                     <tr key={b.id} className="border-b hover:bg-muted/30">
                       <td className="p-3 font-mono text-xs" data-label="Nº">{b.budget_number}</td>
                       <td className="p-3 text-xs" data-label="Fecha">{formatDate(b.issue_date)}</td>
-                      <td className="p-3" data-label="Cliente">{b.customer?.name || "—"}</td>
-                      <td className="p-3 hidden md:table-cell text-xs text-muted-foreground" data-label="Empresa">{b.company?.name}</td>
+                      <td className="p-3" data-label="Cliente">{b.customer_name || "—"}</td>
+                      <td className="p-3 hidden md:table-cell text-xs text-muted-foreground" data-label="Empresa">{b.company_name}</td>
                       <td className="p-3 text-right font-medium" data-label="Total">{formatCurrency(b.total)}</td>
                       <td className="p-3 text-center" data-label="Estado">
                         <CommercialStatusBadge status={b.commercial_status} />

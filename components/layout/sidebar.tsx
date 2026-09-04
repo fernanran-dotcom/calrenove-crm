@@ -29,7 +29,7 @@ const navItems = [
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ userLabel }: { userLabel?: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -53,6 +53,11 @@ export function Sidebar() {
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <span className="text-lg text-[#cc092f]">Calrenove</span>
             <span className="text-xs text-muted-foreground">CRM</span>
+            {userLabel && (
+              <span className="ml-2 text-xs text-muted-foreground hidden xl:inline">
+                ({userLabel})
+              </span>
+            )}
           </Link>
         </div>
 

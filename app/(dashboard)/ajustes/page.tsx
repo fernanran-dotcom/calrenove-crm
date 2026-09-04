@@ -1,28 +1,22 @@
-import { createClient } from "@/lib/supabase";
+import { getSessionUser } from "@/lib/auth";
+import { query, queryOne } from "@/lib/db";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReminderSettingsForm } from "./reminder-settings-form";
-import { Separator } from "@/components/ui/separator";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function AjustesPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
-  const { data: companies } = await supabase.from("companies").select("*");
-  const { data: reminder } = await supabase
-    .from("email_reminder_settings")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  const { data: logs } = await supabase
-    .from("email_reminder_logs")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("sent_at", { ascending: false })
-    .limit(10);
+  const companies = await query<{ id: string; name: string; color: string }>(
+    "SELECT id, name, color FROM public.companies ORDER BY name"
+  );
+  const reminder = await queryOne<{ enabled: boolean; frequency_days: number }>(
+    "SELECT enabled, frequency_days FROM public.email_reminder_settings WHERE user_id = $1",
+    [user.id]
+  );
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -31,8 +25,20 @@ export default async function AjustesPage() {
       <Card>
         <CardHeader><CardTitle>Perfil</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Email:</span> {user.email}</p>
+          <p><span className="text-muted-foreground">Usuario:</span> {user.email.split("@")[0]}</p>
           <p><span className="text-muted-foreground">ID:</span> <span className="font-mono text-xs">{user.id}</span></p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Folletos de equipos</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Sube el PDF de cada caldera o aire acondicionado. Se añadirá al final del presupuesto al imprimir o compartir.
+          </p>
+          <a href="/ajustes/folletos" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow h-9 px-4 py-2 text-sm font-medium hover:bg-primary/90">
+            Gestionar folletos
+          </a>
         </CardContent>
       </Card>
 
@@ -54,22 +60,10 @@ export default async function AjustesPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Folletos de equipos</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            Sube el PDF de cada caldera o aire acondicionado. Se añadirá al final del presupuesto al imprimir o compartir.
-          </p>
-          <Link href="/ajustes/folletos" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground shadow h-9 px-4 py-2 text-sm font-medium hover:bg-primary/90">
-            Gestionar folletos
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader><CardTitle>Recordatorios de cobro</CardTitle></CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Los recordatorios se envían a tu email ({user.email}) con los presupuestos aceptados pendientes de cobro.
+            Los recordatorios de presupuestos pendientes de cobro.
           </p>
           <ReminderSettingsForm
             initialEnabled={reminder?.enabled ?? true}
@@ -77,23 +71,6 @@ export default async function AjustesPage() {
           />
         </CardContent>
       </Card>
-
-      {logs && logs.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle>Últimos avisos enviados</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              {logs.map((log) => (
-                <div key={log.id} className="flex justify-between text-xs text-muted-foreground border-b pb-1">
-                  <span>{new Date(log.sent_at).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                  <span>{log.budget_ids?.length || 0} presupuestos</span>
-                  <span className={log.status === "sent" ? "text-emerald-600" : "text-red-600"}>{log.status}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
