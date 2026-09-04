@@ -14,7 +14,8 @@ export async function GET(
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const { slug } = await params;
+  let { slug } = await params;
+  if (slug.endsWith(".pdf")) slug = slug.slice(0, -4);
   if (!/^[a-z0-9-]+$/.test(slug)) {
     return NextResponse.json({ error: "Nombre inválido" }, { status: 400 });
   }
