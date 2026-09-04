@@ -105,7 +105,7 @@ export function FolletosManager({
                   <div key={m.id} className="flex flex-wrap items-center gap-3 p-4">
                     <div className="flex-1 min-w-40">
                       <p className="text-sm font-medium">{m.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatCurrency(m.price_final)}</p>
+                      <p className="text-xs text-muted-foreground">{formatCurrency(Number(m.price_final))}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {m.brochure_url ? (

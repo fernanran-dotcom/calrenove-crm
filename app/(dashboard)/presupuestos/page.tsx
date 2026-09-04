@@ -63,7 +63,7 @@ export default async function HistorialPage() {
                       <td className="p-3" data-label="Cliente">{b.customer_name || "—"}</td>
                       <td className="p-3 hidden md:table-cell text-xs text-muted-foreground" data-label="Empresa">{b.company_name}</td>
                       <td className="p-3 hidden lg:table-cell text-xs text-muted-foreground" data-label="Modelo">{b.model_name}</td>
-                      <td className="p-3 text-right font-medium" data-label="Total">{formatCurrency(b.total)}</td>
+                      <td className="p-3 text-right font-medium" data-label="Total">{formatCurrency(Number(b.total))}</td>
                       <td className="p-3 text-center" data-label="Estado"><CommercialStatusBadge status={b.commercial_status} /></td>
                       <td className="p-3 text-center" data-label="Cobro">{b.commercial_status !== "rejected" ? <PaymentStatusBadge status={b.payment_status} /> : <span className="text-xs text-muted-foreground">—</span>}</td>
                       <td className="p-3 text-center" data-label="">

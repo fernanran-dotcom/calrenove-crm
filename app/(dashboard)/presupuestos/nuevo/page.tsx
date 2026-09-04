@@ -14,7 +14,7 @@ export default async function NuevoPresupuestoPage() {
   const brands = await query<BoilerBrand>(
     "SELECT * FROM public.boiler_brands WHERE is_custom = false ORDER BY name"
   );
-  const models = await query<BoilerModel>(`
+  const modelsRaw = await query<any>(`
     SELECT m.*,
       COALESCE((
         SELECT json_agg(i.description ORDER BY i.sort_order)
@@ -32,6 +32,13 @@ export default async function NuevoPresupuestoPage() {
     WHERE m.brand_id IN (SELECT id FROM public.boiler_brands WHERE is_custom = false)
     ORDER BY m.name
   `);
+  // pg devuelve numeric como string: convertir a número
+  const models: BoilerModel[] = modelsRaw.map((m: any) => ({
+    ...m,
+    price_base: Number(m.price_base),
+    price_final: Number(m.price_final),
+    price_rounded: Number(m.price_rounded),
+  }));
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
